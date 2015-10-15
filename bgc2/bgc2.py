@@ -37,7 +37,7 @@ def read_bgc2(filename):
 	groupend = groupstart + ngroups*groupsize
 	group_bin = bin_string[groupstart:groupend]
 	group = []
-	for i in range(ngroups):
+	for i in xrange(ngroups):
 		group.append(list(struct.unpack(groupformat, group_bin[i*groupsize:(i+1)*groupsize])))
 
 	# Particle stuff
@@ -45,7 +45,7 @@ def read_bgc2(filename):
 	particle_bin = bin_string[particlestart:]
 	particle = []
 	p_start = 0
-	for i in range(ngroups):
+	for i in xrange(ngroups):
 		npart = group[i][2]
 		particle.append([])
 		for j in range(npart):
