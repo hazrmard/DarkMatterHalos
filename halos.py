@@ -4,12 +4,12 @@ import sys
 import bgc2
 import numpy as np
 
+
 class HalfMassRadius:
     def __init__(self, file):
         self.file = file
-        self.header = None
-        self.halos = None
-        self.particles = None
+        self.header = []
+        self.halos = []
 
     def read_data(self):
         """
@@ -18,19 +18,32 @@ class HalfMassRadius:
             Particle is a Record Array of Record Arrays for each halo id and for each particle.
             Schema for arrays can be found in bcg2.py.
         """
-        self.header, self.halos, self.particles = bgc2.read_bgc2_numpy(self.file)
+        self.header, halos, particles = bgc2.read_bgc2_numpy(self.file)
+        for i in xrange(len(halos)):
+            self.halos.append(Halo(halos[i].id, [halos[i].x, halos[i].y, halos[i].z], particles[i]))
         print "data file read"
 
     def center_halos(self):
         """
-            Iterating over each halo to obtain its centre. Then iterating over each particle in the halo to center it.
+            Iterating over each halo and subtracting its centre position from particle coordinates.
         """
-        for i in xrange(len(self.halos)):       # iterating over each halo
-            hx = self.halos[i].x
-            hy = self.halos[i].y
-            hz = self.halos[i].z
-            for j in xrange(len(self.particles[i])):    # iterating over all particles/halo and centering them
-                self.particles[i][j].x -= hx
-                self.particles[i][j].y -= hy
-                self.particles[i][j].z -= hz
+        for halo in self.halos:
+            halo.particles.x -= halo.pos.x
+            halo.particles.y -= halo.pos.y
+            halo.particles.z -= halo.pos.z
+        print "halos centered"
 
+    def get_covariance_matrices(self):
+        for halo in self.halos:
+            halo.cov = np.cov([halo.particles.x, halo.particles.y, halo.particles.z])
+        print "covariance matrices obtained"
+
+
+class Halo:
+    coord_type = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32)])
+
+    def __init__(self, i, pos, particles):
+        self.id = i
+        self.pos = np.array(pos, dtype=Halo.coord_type).T.view(np.recarray)
+        self.particles = particles
+        self.cov = np.empty((3,3))
