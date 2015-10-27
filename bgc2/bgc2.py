@@ -157,7 +157,7 @@ def read_bgc2_numpy(filename):
 
 
 def main():
-	header, group, particle = read_bgc2(sys.argv[1])
+	header, group, particle = read_bgc2_numpy(sys.argv[1])
 
 	print 'Header contents:'
 	for value in header:
