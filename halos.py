@@ -10,6 +10,7 @@ class HalfMassRadius:
         self.file = file
         self.header = []
         self.halos = []
+        self.h = []
 
     def read_data(self):
         """
@@ -19,8 +20,9 @@ class HalfMassRadius:
             Schema for arrays can be found in bcg2.py.
         """
         self.header, halos, particles = bgc2.read_bgc2_numpy(self.file)
+        self.h = halos
         for i in xrange(len(halos)):
-            self.halos.append(Halo(halos[i].id, [halos[i].x, halos[i].y, halos[i].z], particles[i]))
+            self.halos.append(Halo(halos[i].id, (halos[i].x, halos[i].y, halos[i].z), particles[i]))
         print "data file read"
 
     def center_halos(self):
@@ -38,12 +40,17 @@ class HalfMassRadius:
             halo.cov = np.cov([halo.particles.x, halo.particles.y, halo.particles.z])
         print "covariance matrices obtained"
 
+    def get_eigenvectors(self):
+        for halo in self.halos:
+            _, halo.eig = np.linalg.eig(halo.cov)
+
 
 class Halo:
     coord_type = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32)])
 
     def __init__(self, i, pos, particles):
         self.id = i
-        self.pos = np.array(pos, dtype=Halo.coord_type).T.view(np.recarray)
+        self.pos = np.array(pos, dtype=Halo.coord_type).view(np.recarray)
         self.particles = particles
-        self.cov = np.empty((3,3))
+        self.cov = np.empty((3,3), dtype=np.float32)
+        self.eig = np.empty((3,3), dtype=np.float32)
