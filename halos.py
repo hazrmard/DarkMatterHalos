@@ -4,7 +4,9 @@ import sys
 import bgc2
 import numpy as np
 import warnings
-warnings.simplefilter('error', RuntimeWarning)
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+warnings.simplefilter('error', RuntimeWarning)      # raise exception on RuntimeWarning
 
 
 class HalfMassRadius:
@@ -27,6 +29,14 @@ class HalfMassRadius:
         for i in xrange(len(halos)):
             self.halos.append(Halo(halos[i].id, (halos[i].x, halos[i].y, halos[i].z), particles[i]))
         print "data file read"
+
+    def filter(self, minimum=None, maximum=None):
+        if minimum is not None:
+            self.halos = [h for h in self.halos if len(h.particles) >= minimum]
+            print "halos with less than " + str(minimum) + " particles filtered out"
+        if maximum is not None:
+            self.halos = [h for h in self.halos if len(h.particles) <= maximum]
+            print "halos with more than " + str(maximum) + " particles filtered out"
 
     def center_halos(self):
         for halo in self.halos:
@@ -72,6 +82,7 @@ class Halo:
         self.evals = np.empty(3, dtype=np.float32)
         self.radii = np.empty(len(self.particles), dtype=np.float32)
         self.half_mass_radius = np.float32(0)
+        self.fig = None
 
     def center_halo(self):
         """
@@ -116,3 +127,19 @@ class Halo:
             self.half_mass_radius = np.float32((radii[int(l/2)] + radii[(l-2)/2])/2.0)
         else:
             self.half_mass_radius = np.float32(radii[int((l-1)/2.0)])
+
+    def visualize(self):
+        """
+        3D plot of particles. Particles within half mass radius are in red. Others are in blue.
+        :return:
+        """
+        self.fig = plt.figure(self.id).add_subplot(111, projection='3d')
+        sortedindices = np.array(np.argsort(self.radii))
+        l = int(len(sortedindices)/2)
+        firsthalf = sortedindices[:l]
+        secondhalf = sortedindices[l:]
+        self.fig.scatter(self.particles.x[firsthalf], self.particles.y[firsthalf], self.particles.z[firsthalf], c='r')
+        self.fig.scatter(self.particles.x[secondhalf], self.particles.y[secondhalf], self.particles.z[secondhalf], c='b')
+        plt.show()
+        plt.close()
+
