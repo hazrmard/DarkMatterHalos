@@ -51,19 +51,21 @@ class HalfMassRadius:
         for halo in self.halos:
             eigenvals, eigvecs = np.linalg.eig(halo.cov)
             order = np.argsort(eigenvals)[::-1]
+            halo.evals = np.sort(eigenvals)[::-1]
             halo.eig = np.vstack((eigvecs[:order[0]], eigvecs[:order[1]], eigvecs[:order[2]])).T
 
     def get_radii(self):
         """
-        Using the general ellipsoid equation x(T).A.x = ellipsoidal radius (er) to find 'er' for all particles.
-        From Wikipedia: the eigenvectors of 'A' define the ellipsoid's principal components, therefore A is the
-        covariance matrix.
+        Using the general ellipsoid equation x(T).A.x = er^2 (ellipsoidal radius) to find 'er' for all particles.
+        From Wikipedia: the eigenvectors of 'A' define the ellipsoid's principal components, therefore A is either
+        the covariance matrix or its inverse. My calculations on Mathematica indicate the latter.
         """
         for halo in self.halos:
-            for i in xrange(len(halo.particles)):
-                coords = np.vstack((halo.particles[i].x, halo.particles[i].y, halo.particles[i].z))
-                er = np.dot(coords.T, np.dot(halo.cov, coords))
-                np.append(halo.radii, er)
+            coords = np.array(zip(halo.particles.x, halo.particles.y, halo.particles.z))    # n x 3 matrix
+            try:
+                halo.radii = np.sqrt(np.einsum('ij,ji->i', coords, np.dot(np.linalg.inv(halo.cov), coords.T)))
+            except np.linalg.linalg.LinAlgError:        # singular covariance matrix
+                halo.radii = -1                         # handle singular covariance matrices
         print "radii computed"
 
     def get_half_mass_radii(self):
@@ -89,5 +91,6 @@ class Halo:
         self.particles = particles
         self.cov = np.empty((3, 3), dtype=np.float32)
         self.eig = np.empty((3, 3), dtype=np.float32)
+        self.evals = np.empty(3, dtype=np.float32)
         self.radii = np.empty(len(self.particles), dtype=np.float32)
         self.half_mass_radius = np.float32(0)
