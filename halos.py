@@ -3,6 +3,8 @@
 import sys
 import bgc2
 import numpy as np
+import warnings
+warnings.simplefilter('error', RuntimeWarning)
 
 
 class HalfMassRadius:
@@ -11,6 +13,7 @@ class HalfMassRadius:
         self.header = []
         self.halos = []
         self.h = []
+        self.warnings = {}
 
     def read_data(self):
         """
@@ -26,59 +29,34 @@ class HalfMassRadius:
         print "data file read"
 
     def center_halos(self):
-        """
-        Iterating over each halo and subtracting its centre position from particle coordinates.
-        """
         for halo in self.halos:
-            halo.particles.x -= halo.pos.x
-            halo.particles.y -= halo.pos.y
-            halo.particles.z -= halo.pos.z
+            halo.center_halo()
         print "halos centered"
 
     def get_covariance_matrices(self):
-        """
-        Calculate the covariance matrix for each halo particle coordinate set.
-        """
         for halo in self.halos:
-            halo.cov = np.cov([halo.particles.x, halo.particles.y, halo.particles.z])
+            halo.get_covariance_matrix()
         print "covariance matrices obtained"
 
     def get_eigenvectors(self):
-        """
-        Calculate eigenvectors for each halo and store them in order of decreasing eigenvalue. The first Principal
-        Component (major axis) is in the first column.
-        """
         for halo in self.halos:
-            eigenvals, eigvecs = np.linalg.eig(halo.cov)
-            order = np.argsort(eigenvals)[::-1]
-            halo.evals = np.sort(eigenvals)[::-1]
-            halo.eig = np.vstack((eigvecs[:order[0]], eigvecs[:order[1]], eigvecs[:order[2]])).T
+            halo.get_eigenvectors()
+        print "eigenvectors computed"
 
     def get_radii(self):
-        """
-        Using the general ellipsoid equation x(T).A.x = er^2 (ellipsoidal radius) to find 'er' for all particles.
-        From Wikipedia: the eigenvectors of 'A' define the ellipsoid's principal components, therefore A is either
-        the covariance matrix or its inverse. My calculations on Mathematica indicate the latter.
-        """
         for halo in self.halos:
-            coords = np.array(zip(halo.particles.x, halo.particles.y, halo.particles.z))    # n x 3 matrix
             try:
-                halo.radii = np.sqrt(np.einsum('ij,ji->i', coords, np.dot(np.linalg.inv(halo.cov), coords.T)))
+                halo.get_radii()
             except np.linalg.linalg.LinAlgError:        # singular covariance matrix
                 halo.radii = -1                         # handle singular covariance matrices
+            except RuntimeWarning as a:
+                self.warnings[halo.id] = a.message
+        print "total warnings: " + str(len(self.warnings))
         print "radii computed"
 
     def get_half_mass_radii(self):
-        """
-        Sorting radii by size and taking the median of the array as half_mass_radius.
-        """
         for halo in self.halos:
-            radii = np.sort(halo.radii)
-            l = len(radii)
-            if len(halo.radii) % 2 == 0:
-                halo.half_mass_radius = np.float32((radii[l/2] + radii[(l-2)/2])/2.0)
-            else:
-                halo.half_mass_radius = np.float32(radii[(l-1)/2.0])
+            halo.get_half_mass_radius()
         print "half mass radii computed"
 
 
@@ -94,3 +72,47 @@ class Halo:
         self.evals = np.empty(3, dtype=np.float32)
         self.radii = np.empty(len(self.particles), dtype=np.float32)
         self.half_mass_radius = np.float32(0)
+
+    def center_halo(self):
+        """
+        Iterating over each halo and subtracting its centre position from particle coordinates.
+        """
+        self.particles.x -= self.pos.x
+        self.particles.y -= self.pos.y
+        self.particles.z -= self.pos.z
+
+    def get_covariance_matrix(self):
+        """
+        Calculate the covariance matrix for each halo particle coordinate set.
+        """
+        self.cov = np.cov([self.particles.x, self.particles.y, self.particles.z])
+
+    def get_eigenvectors(self):
+        """
+        Calculate eigenvectors for each halo and store them in order of decreasing eigenvalue. The first Principal
+        Component (major axis) is in the first column.
+        """
+        eigenvals, eigvecs = np.linalg.eig(self.cov)
+        order = np.argsort(eigenvals)[::-1]
+        self.evals = np.sort(eigenvals)[::-1]
+        self.eig = np.vstack((eigvecs[:order[0]], eigvecs[:order[1]], eigvecs[:order[2]])).T
+
+    def get_radii(self):
+        """
+        Using the general ellipsoid equation x(T).A.x = er^2 (ellipsoidal radius) to find 'er' for all particles.
+        From Wikipedia: the eigenvectors of 'A' define the ellipsoid's principal components, therefore A is either
+        the covariance matrix or its inverse. My calculations on Mathematica indicate the latter.
+        """
+        coords = np.array(zip(self.particles.x, self.particles.y, self.particles.z))    # n x 3 matrix
+        self.radii = np.sqrt(np.einsum('ij,ji->i', coords, np.dot(np.linalg.inv(self.cov), coords.T)))
+
+    def get_half_mass_radius(self):
+        """
+        Sorting radii by size and taking the median of the array as half_mass_radius.
+        """
+        radii = np.sort(self.radii)
+        l = len(radii)
+        if len(self.radii) % 2 == 0:
+            self.half_mass_radius = np.float32((radii[int(l/2)] + radii[(l-2)/2])/2.0)
+        else:
+            self.half_mass_radius = np.float32(radii[int((l-1)/2.0)])
