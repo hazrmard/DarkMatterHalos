@@ -6,6 +6,9 @@ import numpy as np
 import warnings
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
+#Settings
+plt.hold(True)
 warnings.simplefilter('error', RuntimeWarning)      # raise exception on RuntimeWarning
 
 
@@ -106,16 +109,31 @@ class Halo:
         eigenvals, eigvecs = np.linalg.eig(self.cov)
         order = np.argsort(eigenvals)[::-1]
         self.evals = np.sort(eigenvals)[::-1]
-        self.eig = np.vstack((eigvecs[:order[0]], eigvecs[:order[1]], eigvecs[:order[2]])).T
+        self.eig = np.vstack((eigvecs[:, order[0]], eigvecs[:, order[1]], eigvecs[:, order[2]])).T
 
-    def get_radii(self):
+    def get_radii_2(self):          # deprected approach to finding ellipsoid fit
         """
         Using the general ellipsoid equation x(T).A.x = er^2 (ellipsoidal radius) to find 'er' for all particles.
         From Wikipedia: the eigenvectors of 'A' define the ellipsoid's principal components, therefore A is either
         the covariance matrix or its inverse. My calculations on Mathematica indicate the latter.
         """
         coords = np.array(zip(self.particles.x, self.particles.y, self.particles.z))    # n x 3 matrix
-        self.radii = np.sqrt(np.einsum('ij,ji->i', coords, np.dot(np.linalg.inv(self.cov), coords.T)))
+        invcov = np.linalg.inv(self.cov)
+        invdet = np.linalg.det(self.cov)
+        self.radii = np.sqrt(np.einsum('ij,ji->i', coords, np.dot(invcov / invdet, coords.T)))
+
+    def get_radii(self):
+        """
+        The points are first transformed into a basis defined by the eigenvectors of the covariance matrix.
+        Using equation ax^2 + by^2 + cz^2 = er where a, b, and c are normalized eigenvalues of the covariance matrix.
+        """
+        coords = np.array(zip(self.particles.x, self.particles.y, self.particles.z))    # n x 3 matrix
+        e_1 = np.linalg.inv(self.eig)              # inverse eigenvector matrix
+        e_1c = np.dot(e_1, coords.T)               # points transformed to the new basis.
+        e_1c2 = e_1c * e_1c                        # squared coordinates
+        w = np.diag(self.evals) / np.linalg.norm(self.evals)  # normalized diagonal matrix containing eigenvalues of covariance matrix
+        we_1c2 = np.dot(w, e_1c2)                  # weighted squared coords. in column vectors ([ax^2],[by^2],[cz^2])
+        self.radii = np.sqrt(np.einsum('ij->j', we_1c2))    # sqrt of sum of weighted squared coordinates
 
     def get_half_mass_radius(self):
         """
@@ -128,10 +146,9 @@ class Halo:
         else:
             self.half_mass_radius = np.float32(radii[int((l-1)/2.0)])
 
-    def visualize(self):
+    def visualize(self, ellipsoids=False):
         """
         3D plot of particles. Particles within half mass radius are in red. Others are in blue.
-        :return:
         """
         self.fig = plt.figure(self.id).add_subplot(111, projection='3d')
         sortedindices = np.array(np.argsort(self.radii))
@@ -140,6 +157,44 @@ class Halo:
         secondhalf = sortedindices[l:]
         self.fig.scatter(self.particles.x[firsthalf], self.particles.y[firsthalf], self.particles.z[firsthalf], c='r')
         self.fig.scatter(self.particles.x[secondhalf], self.particles.y[secondhalf], self.particles.z[secondhalf], c='b')
+        if ellipsoids:
+            self._draw_ellipsoids()
         plt.show()
         plt.close()
 
+    def _draw_ellipsoids(self):
+        ax = self.fig
+        hmrad = self.half_mass_radius
+        maxrad = max(self.radii)
+        u = np.linspace(0, 2 * np.pi, 100)
+        v = np.linspace(0, np.pi, 100)
+        normev = max(self.evals)    # norm of eigenvalue vector
+        alpha = 0.3
+        for r, c in [(hmrad, 'r'), (maxrad, 'b')]:
+            x = (self.evals[0] * r / normev) * np.outer(np.cos(u), np.sin(v))
+            y = (self.evals[1] * r / normev) * np.outer(np.sin(u), np.sin(v))
+            z = (self.evals[2] * r / normev) * np.outer(np.ones(np.size(u)), np.cos(v))
+            tcoords = np.dot(self.eig, np.array(zip(x, y, z)).T)        # transformed ellipsoid coordinates
+            ax.plot_surface(tcoords[0, :], tcoords[1, :], tcoords[2, :], rstride=4, cstride=4, color=c, alpha=0.3)
+            alpha /= 2.0
+        ax.set_xlim3d(-maxrad, maxrad)
+        ax.set_ylim3d(-maxrad, maxrad)
+        ax.set_zlim3d(-maxrad, maxrad)
+
+
+def main(path='..\data\halos_0.1.bgc2'):
+    t = HalfMassRadius(path)
+    t.read_data()
+    t.filter(4)
+    t.center_halos()
+    t.get_covariance_matrices()
+    t.get_eigenvectors()
+    t.get_radii()
+    t.get_half_mass_radii()
+    return t
+
+
+def gen_ellipsoid(r=(1,1,1), n=100, mode='constant particles'):
+    if mode == 'shell':
+        pass
+    pass
