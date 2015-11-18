@@ -6,6 +6,7 @@ import numpy as np
 import warnings
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from gendata import *
 
 #Settings
 plt.hold(True)
@@ -131,7 +132,8 @@ class Halo:
         e_1 = np.linalg.inv(self.eig)              # inverse eigenvector matrix
         e_1c = np.dot(e_1, coords.T)               # points transformed to the new basis.
         e_1c2 = e_1c * e_1c                        # squared coordinates
-        w = np.diag(self.evals) / np.linalg.norm(self.evals)  # normalized diagonal matrix containing eigenvalues of covariance matrix
+        w = np.diag(self.evals) / max(self.evals)  # normalized diagonal matrix containing eigenvalues of covariance matrix
+        # w = np.diag(self.evals)
         we_1c2 = np.dot(w, e_1c2)                  # weighted squared coords. in column vectors ([ax^2],[by^2],[cz^2])
         self.radii = np.sqrt(np.einsum('ij->j', we_1c2))    # sqrt of sum of weighted squared coordinates
 
@@ -164,22 +166,23 @@ class Halo:
 
     def _draw_ellipsoids(self):
         ax = self.fig
-        hmrad = self.half_mass_radius
-        maxrad = max(self.radii)
+        hmrad2 = self.half_mass_radius**2
+        maxrad2 = max(self.radii)**2
         u = np.linspace(0, 2 * np.pi, 100)
         v = np.linspace(0, np.pi, 100)
-        normev = max(self.evals)    # norm of eigenvalue vector
+        normev = max(self.evals)    # normalization factor
+        ev = self.evals / normev
         alpha = 0.3
-        for r, c in [(hmrad, 'r'), (maxrad, 'b')]:
-            x = (self.evals[0] * r / normev) * np.outer(np.cos(u), np.sin(v))
-            y = (self.evals[1] * r / normev) * np.outer(np.sin(u), np.sin(v))
-            z = (self.evals[2] * r / normev) * np.outer(np.ones(np.size(u)), np.cos(v))
+        for r, c in [(hmrad2, 'r'), (maxrad2, 'b')]:
+            x = np.sqrt(r / ev[0]) * np.outer(np.cos(u), np.sin(v))
+            y = np.sqrt(r / ev[1]) * np.outer(np.sin(u), np.sin(v))
+            z = np.sqrt(r / ev[2]) * np.outer(np.ones_like(u), np.cos(v))
             tcoords = np.dot(self.eig, np.array(zip(x, y, z)).T)        # transformed ellipsoid coordinates
-            ax.plot_surface(tcoords[0, :], tcoords[1, :], tcoords[2, :], rstride=4, cstride=4, color=c, alpha=0.3)
+            ax.plot_surface(tcoords[0, :], tcoords[1, :], tcoords[2, :], rstride=4, cstride=4, color=c, alpha=alpha)
             alpha /= 2.0
-        ax.set_xlim3d(-maxrad, maxrad)
-        ax.set_ylim3d(-maxrad, maxrad)
-        ax.set_zlim3d(-maxrad, maxrad)
+        ax.set_xlim3d(-np.sqrt(maxrad2 / ev[0]), np.sqrt(maxrad2 / ev[0]))
+        ax.set_ylim3d(-np.sqrt(maxrad2 / ev[1]), np.sqrt(maxrad2 / ev[1]))
+        ax.set_zlim3d(-np.sqrt(maxrad2 / ev[2]), np.sqrt(maxrad2 / ev[2]))
 
 
 def main(path='..\data\halos_0.1.bgc2'):
@@ -194,7 +197,12 @@ def main(path='..\data\halos_0.1.bgc2'):
     return t
 
 
-def gen_ellipsoid(r=(1,1,1), n=100, mode='constant particles'):
-    if mode == 'shell':
-        pass
-    pass
+def test(n=100, r=(1, 0.5, 0.25)):
+    x, y, z = two_shells((n, n), r)
+    coords = zip(x, y, z)
+    h = Halo(n, (0, 0, 0), np.array(coords, dtype=Halo.coord_type).view(np.recarray))
+    h.get_covariance_matrix()
+    h.get_eigenvectors()
+    h.get_radii()
+    h.get_half_mass_radius()
+    return h
