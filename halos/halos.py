@@ -17,7 +17,7 @@ class HalfMassRadius:
     def __init__(self, file):
         self.file = file
         self.header = []
-        self.halos = []
+        self.halos = []     # list of halos
         self.h = []
         self.warnings = {}
 
@@ -25,8 +25,8 @@ class HalfMassRadius:
         """
         bcg2.read_bcg2_numpy returns 3 numpy Record Arrays for header, halos, and particles.
         Header and halos are single dimensional Record Arrays containing data and halo information.
-        Particle is a Record Array of Record Arrays for each halo id and for each particle.
-        Schema for arrays can be found in bcg2.py.
+        Particle is a Record Array of Record Arrays for each halo id and for each particle axis.
+        Schema for arrays can be found in halos/helpers/bcg2.py.
         """
         self.header, halos, particles = bgc2.read_bgc2_numpy(self.file)
         self.h = halos
@@ -80,8 +80,8 @@ class Halo:
     def __init__(self, i, pos, particles):
         self.id = i
         self.pos = np.array(pos, dtype=Halo.coord_type).view(np.recarray)
-        self.particles = particles
-        self.particlesn = particles
+        self.particles = particles  # record array of particles (see halos/helpers/helpers.py -> create_halo())
+        self.particlesn = particles # currently not in use
         self.cov = np.empty((3, 3), dtype=np.float32)
         self.eig = np.empty((3, 3), dtype=np.float32)
         self.evals = np.empty(3, dtype=np.float32)
@@ -113,7 +113,7 @@ class Halo:
         self.evals = np.sort(eigenvals)[::-1]
         self.eig = np.vstack((eigvecs[:, order[0]], eigvecs[:, order[1]], eigvecs[:, order[2]])).T
 
-    def get_radii_2(self):          # deprected approach to finding ellipsoid fit
+    def get_radii_2(self):          # depracated approach to finding ellipsoid fit. Use get_radii()
         """
         Using the general ellipsoid equation x(T).A.x = er^2 (ellipsoidal radius) to find 'er' for all particles.
         From Wikipedia: the eigenvectors of 'A' define the ellipsoid's principal components, therefore A is either
@@ -133,10 +133,10 @@ class Halo:
         e_1 = np.linalg.inv(self.eig)              # inverse eigenvector matrix
         e_1c = np.dot(e_1, coords.T)               # points transformed to the new basis.
         self.particlesn = zip(*e_1c)               # store new basis particles
-        e_1c2 = e_1c * e_1c                        # squared coordinates
+        e_1c2 = e_1c * e_1c                        # squared coordinates. In column vectors ([x^2],[y^2],[z^2])wh
         w = np.diag(self.evals) / max(self.evals)  # normalized diagonal matrix containing eigenvalues of covariance matrix
         # w = np.diag(self.evals)
-        we_1c2 = np.dot(w, e_1c2)                  # weighted squared coords. in column vectors ([ax^2],[by^2],[cz^2])
+        we_1c2 = np.dot(w, e_1c2)                  # weighted squared coords. In column vectors ([ax^2],[by^2],[cz^2])
         self.radii = np.sqrt(np.einsum('ij->j', we_1c2))    # sqrt of sum of weighted squared coordinates
 
     def get_half_mass_radius(self):
@@ -177,14 +177,14 @@ class Halo:
         normev = max(self.evals)    # normalization factor
         ev = self.evals / normev
         alpha = 0.3
-        for r, c in [(hmrad2, 'r'), (maxrad2, 'b')]:
+        for r, c in [(hmrad2, 'r'), (maxrad2, 'b')]:            # generate ellipsoid surface data parametrically
             x = np.sqrt(r / ev[0]) * np.outer(np.cos(u), np.sin(v))
             y = np.sqrt(r / ev[1]) * np.outer(np.sin(u), np.sin(v))
             z = np.sqrt(r / ev[2]) * np.outer(np.ones_like(u), np.cos(v))
             tcoords = np.dot(self.eig, np.array(zip(x, y, z)).T)        # transformed ellipsoid coordinates
             ax.plot_surface(tcoords[0, :], tcoords[1, :], tcoords[2, :], rstride=4, cstride=4, color=c, alpha=alpha)
             alpha /= 2.0
-        ax.set_xlim3d(-np.sqrt(maxrad2 / ev[0]), np.sqrt(maxrad2 / ev[0]))
+        ax.set_xlim3d(-np.sqrt(maxrad2 / ev[0]), np.sqrt(maxrad2 / ev[0]))   # set axes limits
         ax.set_ylim3d(-np.sqrt(maxrad2 / ev[1]), np.sqrt(maxrad2 / ev[1]))
         ax.set_zlim3d(-np.sqrt(maxrad2 / ev[2]), np.sqrt(maxrad2 / ev[2]))
 

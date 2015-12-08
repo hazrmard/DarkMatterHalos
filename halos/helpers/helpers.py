@@ -1,4 +1,5 @@
 import numpy as np
+from ..halos import Halo
 
 COORDS = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32)])    # coordinates data type
 
@@ -37,3 +38,18 @@ def read_ascii_pos(filepath='', settings=_default_ascii_settings):
     data = np.genfromtxt(filepath, **settings)
     data = data.view(np.recarray)
     return data
+
+
+def create_halo(haloid, halocenter, halox, haloy, haloz):
+    """
+    given array of x,y,z coordinates generates a Halo instance
+    :param haloid: id of halo
+    :param halocenter: centre of halo as a touple e.g (0,0,0)
+    :param halox: list/array of x coordinates
+    :param haloy: list/array of y coordinates
+    :param haloz: list/array of z coordinates
+    :return: a Halo instance
+    """
+    coords = zip(halox, haloy, haloz)
+    h = Halo(haloid, halocenter, np.array(coords, dtype=COORDS).view(np.recarray))
+    return h
