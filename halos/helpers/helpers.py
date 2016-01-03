@@ -1,9 +1,7 @@
 import numpy as np
 from ..halos import Halo
 
-COORDS = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32)])    # coordinates data type
-
-_default_ascii_settings = {'dtype':COORDS,
+_default_ascii_settings = {'dtype': Halo.coord_type,
                            'comments':'#',
                            'delimiter':None,
                            'skip_header': 1,
@@ -51,5 +49,5 @@ def create_halo(haloid, halocenter, halox, haloy, haloz):
     :return: a Halo instance
     """
     coords = zip(halox, haloy, haloz)
-    h = Halo(haloid, halocenter, np.array(coords, dtype=COORDS).view(np.recarray))
+    h = Halo(haloid, halocenter, np.array(coords, dtype=Halo.coord_type).view(np.recarray))
     return h

@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 
 import sys
-from helpers import *
 import numpy as np
 import warnings
 import matplotlib.pyplot as plt
+import bgc2
 from mpl_toolkits.mplot3d import Axes3D
 from gendata import *
 
 #Settings
 plt.hold(True)
 warnings.simplefilter('error', RuntimeWarning)      # raise exception on RuntimeWarning
+
+COORDS = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32)])    # coordinates data type
 
 
 class HalfMassRadius:
@@ -75,7 +77,7 @@ class HalfMassRadius:
 
 
 class Halo:
-    coord_type = COORDS     # COORDS defined in helpers module
+    coord_type = COORDS 
 
     def __init__(self, i, pos, particles):
         self.id = i
