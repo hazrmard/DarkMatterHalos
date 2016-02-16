@@ -152,7 +152,7 @@ class Halo:
         else:
             self.half_mass_radius = np.float32(radii[int((l-1)/2.0)])
     
-    def cut(self)
+    def cut(self):
         """
         Returns indices of the first and second halves of particle/radius arrays corresponding to particles
         in and outside the half mass radius.
@@ -166,14 +166,14 @@ class Halo:
     def cleave(self, indices=None):
         """
         Returns radii along each principal component corresponding the largest projection on that component
-        by particles in the list of indices.
+        by particles in the list of indices. The the fitted ellipsoids will cleave to the outermost particle.
         :indices List of indices for which to get the radii.
         returns a numpy record array of radii e.g. return.x, return.y, return.z give each radius
         """
         indices = list(range(len(self.radii))) if indices is None else indices
-        Rx = max(self.particlesn.x[indices])
-        Ry = max(self.particlesn.y[indices])
-        Rz = max(self.particlesn.z[indices])
+        Rx = np.amax(np.absolute(self.particlesn.x[indices]))
+        Ry = np.amax(np.absolute(self.particlesn.y[indices]))
+        Rz = np.amax(np.absolute(self.particlesn.z[indices]))
         return np.array((Rx, Ry, Rz), dtype=Halo.coord_type).view(np.recarray)
 
     def visualize(self, ellipsoids=False, fraction=1.0):
