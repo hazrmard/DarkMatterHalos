@@ -1,6 +1,7 @@
 __author__ = 'Ibrahim'
 
 import numpy as np
+from ..helpers import *
 
 
 def _gen_angles(n=100):
@@ -24,3 +25,11 @@ def two_shells(n=(100, 100), r=(10, 10, 10), scale=0.5):
     y = np.append(y, y2)
     z = np.append(z, z2)
     return x, y, z
+
+    
+def random_int_halo(n=100, dims=(10,10,10), center=(0,0,0)):
+    x = np.random.randint(-dims[0], dims[0], (1,n))[0] - center[0]
+    y = np.random.randint(-dims[1], dims[1], (1,n))[0] - center[1]
+    z = np.random.randint(-dims[2], dims[2], (1,n))[0] - center[2]
+    id = 'random_int_halo'
+    return helpers.create_halo(id, center, x, y, z)

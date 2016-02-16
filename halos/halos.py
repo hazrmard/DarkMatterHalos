@@ -6,7 +6,7 @@ import warnings
 import matplotlib.pyplot as plt
 import bgc2
 from mpl_toolkits.mplot3d import Axes3D
-from gendata import *
+
 
 #Settings
 plt.hold(True)
@@ -134,7 +134,7 @@ class Halo:
         coords = np.array(zip(self.particles.x, self.particles.y, self.particles.z))    # n x 3 matrix
         e_1 = np.linalg.inv(self.eig)              # inverse eigenvector matrix
         e_1c = np.dot(e_1, coords.T)               # points transformed to the new basis.
-        self.particlesn = zip(*e_1c)               # store new basis particles
+        self.particlesn = np.array(zip(*e_1c), dtype=COORDS).view(np.recarray)               # store new basis particles
         e_1c2 = e_1c * e_1c                        # squared coordinates. In column vectors ([x^2],[y^2],[z^2])wh
         w = np.diag(self.evals) / max(self.evals)  # normalized diagonal matrix containing eigenvalues of covariance matrix
         # w = np.diag(self.evals)
@@ -151,6 +151,30 @@ class Halo:
             self.half_mass_radius = np.float32((radii[int(l/2)] + radii[(l-2)/2])/2.0)
         else:
             self.half_mass_radius = np.float32(radii[int((l-1)/2.0)])
+    
+    def cut(self)
+        """
+        Returns indices of the first and second halves of particle/radius arrays corresponding to particles
+        in and outside the half mass radius.
+        """
+        sortedindices = np.array(np.argsort(self.radii))
+        l = int(len(sortedindices)/2)
+        firsthalf = np.random.choice(sortedindices[:l], size=int(l*fraction))
+        secondhalf = np.random.choice(sortedindices[l:], size=len(sortedindices)-int(l*fraction))
+        return firsthalf, secondhalf
+    
+    def cleave(self, indices=None):
+        """
+        Returns radii along each principal component corresponding the largest projection on that component
+        by particles in the list of indices.
+        :indices List of indices for which to get the radii.
+        returns a numpy record array of radii e.g. return.x, return.y, return.z give each radius
+        """
+        indices = list(range(len(self.radii))) if indices is None else indices
+        Rx = max(self.particlesn.x[indices])
+        Ry = max(self.particlesn.y[indices])
+        Rz = max(self.particlesn.z[indices])
+        return np.array((Rx, Ry, Rz), dtype=Halo.coord_type).view(np.recarray)
 
     def visualize(self, ellipsoids=False, fraction=1.0):
         """
@@ -159,10 +183,7 @@ class Halo:
         :ellipsoids whether to draw fitted surfaces
         """
         self.fig = plt.figure(self.id).add_subplot(111, projection='3d')
-        sortedindices = np.array(np.argsort(self.radii))
-        l = int(len(sortedindices)/2)
-        firsthalf = np.random.choice(sortedindices[:l], size=int(l*fraction))
-        secondhalf = np.random.choice(sortedindices[l:], size=len(sortedindices)-int(l*fraction))
+        firsthalf, secondhalf = self.cut()
         self.fig.scatter(self.particles.x[firsthalf], self.particles.y[firsthalf], self.particles.z[firsthalf], c='r')
         self.fig.scatter(self.particles.x[secondhalf], self.particles.y[secondhalf], self.particles.z[secondhalf], c='b')
         if ellipsoids:
