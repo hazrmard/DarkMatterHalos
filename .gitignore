@@ -2,3 +2,5 @@
 .idea/
 halos/.idea/
 *.xml
+dist/
+build/
