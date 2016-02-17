@@ -9,7 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 #Settings
-plt.hold(True)
+#plt.hold(True)
 warnings.simplefilter('error', RuntimeWarning)      # raise exception on RuntimeWarning
 
 COORDS = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32)])    # coordinates data type
@@ -137,7 +137,6 @@ class Halo:
         self.particlesn = np.array(zip(*e_1c), dtype=COORDS).view(np.recarray)               # store new basis particles
         e_1c2 = e_1c * e_1c                        # squared coordinates. In column vectors ([x^2],[y^2],[z^2])wh
         w = np.diag(self.evals) / max(self.evals)  # normalized diagonal matrix containing eigenvalues of covariance matrix
-        # w = np.diag(self.evals)
         we_1c2 = np.dot(w, e_1c2)                  # weighted squared coords. In column vectors ([ax^2],[by^2],[cz^2])
         self.radii = np.sqrt(np.einsum('ij->j', we_1c2))    # sqrt of sum of weighted squared coordinates
 
@@ -152,10 +151,11 @@ class Halo:
         else:
             self.half_mass_radius = np.float32(radii[int((l-1)/2.0)])
     
-    def cut(self):
+    def cut(self, fraction=1.0):
         """
         Returns indices of the first and second halves of particle/radius arrays corresponding to particles
         in and outside the half mass radius.
+        :fraction fraction of particles to select from each cut
         """
         sortedindices = np.array(np.argsort(self.radii))
         l = int(len(sortedindices)/2)
@@ -183,31 +183,32 @@ class Halo:
         :ellipsoids whether to draw fitted surfaces
         """
         self.fig = plt.figure(self.id).add_subplot(111, projection='3d')
-        firsthalf, secondhalf = self.cut()
-        self.fig.scatter(self.particles.x[firsthalf], self.particles.y[firsthalf], self.particles.z[firsthalf], c='r')
-        self.fig.scatter(self.particles.x[secondhalf], self.particles.y[secondhalf], self.particles.z[secondhalf], c='b')
+        firsthalf, secondhalf = self.cut(fraction)
+        self.fig.scatter(self.particlesn.x[firsthalf], self.particlesn.y[firsthalf], self.particlesn.z[firsthalf], c='r')
+        self.fig.scatter(self.particlesn.x[secondhalf], self.particlesn.y[secondhalf], self.particlesn.z[secondhalf], c='b')
         if ellipsoids:
-            self._draw_ellipsoids()
+            self._draw_ellipsoids((firsthalf, secondhalf))
         plt.show()
         plt.close()
 
-    def _draw_ellipsoids(self):
+    def _draw_ellipsoids(self, indices):
         ax = self.fig
-        hmrad2 = self.half_mass_radius**2
-        maxrad2 = max(self.radii)**2
-        u = np.linspace(0, 2 * np.pi, 100)
-        v = np.linspace(0, np.pi, 100)
-        normev = max(self.evals)    # normalization factor
-        ev = self.evals / normev
+        radii = [self.cleave(indices[0]), self.cleave(indices[1])]
+        colors = ('r', 'c')
         alpha = 0.3
-        for r, c in [(hmrad2, 'r'), (maxrad2, 'b')]:            # generate ellipsoid surface data parametrically
-            x = np.sqrt(r / ev[0]) * np.outer(np.cos(u), np.sin(v))
-            y = np.sqrt(r / ev[1]) * np.outer(np.sin(u), np.sin(v))
-            z = np.sqrt(r / ev[2]) * np.outer(np.ones_like(u), np.cos(v))
-            tcoords = np.dot(self.eig, np.array(zip(x, y, z)).T)        # transformed ellipsoid coordinates
+        
+        u = np.linspace(0, 2 * np.pi, 100)              # generate ellipsoid surface data parametrically
+        v = np.linspace(0, np.pi, 100)
+        
+        for r, c in zip(radii, colors):            
+            x = r.x * np.outer(np.cos(u), np.sin(v))
+            y = r.y * np.outer(np.sin(u), np.sin(v))
+            z = r.z * np.outer(np.ones_like(u), np.cos(v))
+            tcoords = np.dot(np.identity(3), np.array(zip(x, y, z)).T)        # ellipsoid coordinates
             ax.plot_surface(tcoords[0, :], tcoords[1, :], tcoords[2, :], rstride=4, cstride=4, color=c, alpha=alpha)
             alpha /= 2.0
-        ax.set_xlim3d(-np.sqrt(maxrad2 / ev[0]), np.sqrt(maxrad2 / ev[0]))   # set axes limits
-        ax.set_ylim3d(-np.sqrt(maxrad2 / ev[1]), np.sqrt(maxrad2 / ev[1]))
-        ax.set_zlim3d(-np.sqrt(maxrad2 / ev[2]), np.sqrt(maxrad2 / ev[2]))
+        max_r = np.amax([radii[1].x, radii[1].y, radii[1].z])
+        ax.set_xlim3d(-max_r, max_r)   # set axes limits
+        ax.set_ylim3d(-max_r, max_r)
+        ax.set_zlim3d(-max_r, max_r)
 

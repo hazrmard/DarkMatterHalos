@@ -1,3 +1,3 @@
 ﻿from halos import *
-from helpers import *
+import helpers
 import gendata

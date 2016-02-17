@@ -2,7 +2,7 @@ __author__ = 'Ibrahim'
 
 # This file contains examples of functions that can be used to process halo data.
 
-from halos import *
+from halos import *     # contains helpers and gendata modules
 import time
 
 
@@ -20,7 +20,7 @@ def bgc2_test(path='..\data\halos_0.1.bgc2'):
     t.get_eigenvectors()
     t.get_radii()    # center_halo(), get_covariance_matrices() and get_eigenvectors() functions must be called before
     t.get_half_mass_radii()
-    return t
+    return t        # t.halos is a list of halos contained inside the bgc2 file    
 
 
 def ascii_test(path='..\data\ellipsoid.dat'):
@@ -30,11 +30,12 @@ def ascii_test(path='..\data\ellipsoid.dat'):
     """
     print "reading file: ", path
     s_time = time.clock()
-    coords = read_ascii_pos(path)
+    coords = helpers.read_ascii_pos(path)
     h = Halo('test', (0, 0, 0), coords)
     print 'execution time: ', time.clock()-s_time
     return h
 
+    
 def do_all(halo):
     """
     take a halo instance and take it through all functions necessary for calculating half mass radius.
@@ -56,7 +57,7 @@ def do_all(halo):
 # z = [2,3,4,4,0]
 # id = 'test_halo'
 # center = (0, 0, 1)
-# halo = create_halo(id, center, x, y, z)
+# halo = helpers.create_halo(id, center, x, y, z)
 
 # Perform calculations:
 # halo.center_halo()
