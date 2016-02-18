@@ -5,9 +5,28 @@ from ..helpers import *
 
 
 def _gen_angles(n=100):
-    theta = np.arccos(np.random.uniform(-1, 1, n))
+    theta = np.random.uniform(0, np.pi, n)
     phi = np.random.uniform(0, 2 * np.pi, n)
     return theta, phi
+
+
+def _redestribute(a, pdf=lambda x: x):
+    '''Redestributes range of points according to the inverse of the  probability distribution function/
+    :a array of points (like random uniform samples)
+    :pdf function that takes 'a' and returns another list. e.g. def (x): return [i**2 for  i in x]
+    '''
+    min_a = min(a)
+    max_a = max(a)
+    range_a = max_a - min_a
+    b = pdf(a)
+    min_b = min(b)
+    max_b = max(b)
+    range_b = max_b - min_b
+    b_centered = b - min_b
+    b_normed = b_centered / range_b
+    a_new = b_normed * range_a
+    a_new = min_a + a_new
+    return a_new
 
 
 def shell(n=100, r=(10, 10, 10)):
@@ -27,9 +46,22 @@ def two_shells(n=(100, 100), r=(10, 10, 10), scale=0.5):
     return x, y, z
 
     
-def random_int_halo(n=100, dims=(10,10,10), center=(0,0,0)):
-    x = np.random.randint(-dims[0], dims[0], (1,n))[0] - center[0]
-    y = np.random.randint(-dims[1], dims[1], (1,n))[0] - center[1]
-    z = np.random.randint(-dims[2], dims[2], (1,n))[0] - center[2]
-    id = 'random_int_halo'
+def random_rect(n=100, dims=(10,10,10), center=(0,0,0)):
+    x = np.random.uniform(-dims[0], dims[0], (1,n))[0] - center[0]
+    y = np.random.uniform(-dims[1], dims[1], (1,n))[0] - center[1]
+    z = np.random.uniform(-dims[2], dims[2], (1,n))[0] - center[2]
+    id = 'random_rect'
     return helpers.create_halo(id, center, x, y, z)
+
+def random_halo(n=100, dims=(10,10,10), center=(0,0,0)):
+    v, u = _gen_angles(n=n)
+    rx = _redestribute(np.random.uniform(0, dims[0], n), pdf= lambda x: [i**2 for i in x])
+    ry = _redestribute(np.random.uniform(0, dims[1], n), pdf= lambda x: [i**2 for i in x])
+    rz = _redestribute(np.random.uniform(0, dims[2], n), pdf= lambda x: [i**2 for i in x])
+    x = rx * np.cos(u) * np.sin(v) + center[0]
+    y = ry * np.sin(u) * np.sin(v) + center[1]
+    z = rz * np.cos(v) + center[2]
+    id = 'random_halo'
+    return helpers.create_halo(id, center, x, y, z)
+    
+    
