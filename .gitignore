@@ -4,3 +4,4 @@ halos/.idea/
 *.xml
 dist/
 build/
+halos.egg-info/
