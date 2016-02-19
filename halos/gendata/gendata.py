@@ -53,15 +53,20 @@ def random_rect(n=100, dims=(10,10,10), center=(0,0,0)):
     id = 'random_rect'
     return helpers.create_halo(id, center, x, y, z)
 
-def random_halo(n=100, dims=(10,10,10), center=(0,0,0)):
+def random_halo(n=100, dims=(10,10,10), center=(0,0,0), pdf=lambda x: [i**2 for i in x]):
+    '''Generate a halo of particles following some particle distribution.
+    :n number of particles
+    :dims tuple of radial size in each direction
+    :center location of center of halo
+    :pdf probability density function for particle distribution. Should accept and return a list of numbers.
+    '''
     v, u = _gen_angles(n=n)
-    rx = _redestribute(np.random.uniform(0, dims[0], n), pdf= lambda x: [i**2 for i in x])
-    ry = _redestribute(np.random.uniform(0, dims[1], n), pdf= lambda x: [i**2 for i in x])
-    rz = _redestribute(np.random.uniform(0, dims[2], n), pdf= lambda x: [i**2 for i in x])
+    rx = _redestribute(np.random.uniform(0, dims[0], n), pdf= pdf)
+    ry = _redestribute(np.random.uniform(0, dims[1], n), pdf= pdf)
+    rz = _redestribute(np.random.uniform(0, dims[2], n), pdf= pdf)
     x = rx * np.cos(u) * np.sin(v) + center[0]
     y = ry * np.sin(u) * np.sin(v) + center[1]
     z = rz * np.cos(v) + center[2]
     id = 'random_halo'
     return helpers.create_halo(id, center, x, y, z)
-    
     

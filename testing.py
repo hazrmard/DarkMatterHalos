@@ -18,6 +18,7 @@ def bgc2_test(path='..\data\halos_0.1.bgc2'):
     t.center_halos()
     t.get_covariance_matrices()
     t.get_eigenvectors()
+    t.convert_bases()
     t.get_radii()    # center_halo(), get_covariance_matrices() and get_eigenvectors() functions must be called before
     t.get_half_mass_radii()
     return t        # t.halos is a list of halos contained inside the bgc2 file    
@@ -46,6 +47,7 @@ def do_all(halo):
     halo.center_halo()
     halo.get_covariance_matrix()
     halo.get_eigenvectors()
+    halo.convert_basis()
     halo.get_radii()
     halo.get_half_mass_radius()
     print 'finished, execution time: ', time.clock()-s_time
