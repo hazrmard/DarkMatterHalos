@@ -56,7 +56,7 @@ Finally, the halo can be visualized with an ellipsoidal fit:
 ```python
 h.visualize(ellipsoids=True)
 ```
-There are several helper functions in `halos.gendata` module for generating random particle distributions. Please look at cource code documentation for more details.  
+There are several helper functions in `halos.gendata` module for generating random particle distributions. Please look at source code documentation for more details.  
 This project is under active development and function behavior may change significantly in the future.
 
 ### Attribution:
