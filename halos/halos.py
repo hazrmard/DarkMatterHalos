@@ -94,8 +94,6 @@ class Halo:
         self.evals = np.empty(3, dtype=np.float32)       # eigenvalues
         self.radii = np.empty(len(self.particles), dtype=np.float32)    # ellipsoidal radii of particles
         self.half_mass_radius = np.float32(0)                                  # ellipsoidal radius of hald mass sub-halo
-        self.full_radius =np.array((0,0,0), dtype=Halo.coord_type).view(np.recarray)    # rec. array of halo radius components
-        self.half_radius =np.array((0,0,0), dtype=Halo.coord_type).view(np.recarray)    # rec. array of sub-halo radius comp.
         self.fig = None
 
     def center_halo(self):
@@ -180,6 +178,17 @@ class Halo:
             h.get_covariance_matrix()
             h.get_eigenvectors()
             self.get_radii(evals=h.evals)
+    
+    def encapsulation(self):
+        """
+        Get a percentage of points that are not encapsulated by the ellipsoid, but should be.
+        """
+        indices, _ = self.cut()
+        r = self.cleave(indices)
+        norm_evals = self.evals / np.amax(self.evals)
+        R = np.sqrt(np.sum(np.square(norm_evals * np.array([r.x, r.y, r.z]))))
+        total = np.sum(np.where(self.radii[indices]>R, 1, 0))
+        return total / float(len(indices))
     
     def cut(self, fraction=1.0):
         """
