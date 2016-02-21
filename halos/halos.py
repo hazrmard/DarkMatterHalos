@@ -77,21 +77,24 @@ class HalfMassRadius:
 
     def get_half_mass_radii(self):
         for halo in self.halos:
-            halo.get_half_mass_radius()
+            _ = halo.get_half_mass_radius()
         print "half mass radii computed"
 
 
 class Halo:
     coord_type = COORDS 
 
-    def __init__(self, i, pos, particles):
-        self.id = i
+    def __init__(self, id, pos, particles):
+        self.id = id
         self.pos = np.array(pos, dtype=Halo.coord_type).view(np.recarray)
         self.particles = particles  # record array of particles (see halos/helpers/helpers.py -> create_halo())
         self.particlesn = particles     # record array of particles transformed to new basis
-        self.cov = np.empty((3, 3), dtype=np.float32)   # covariance matrix
-        self.eig = np.empty((3, 3), dtype=np.float32)    # eigenvectors
-        self.evals = np.empty(3, dtype=np.float32)       # eigenvalues
+        self.cov = np.empty((3, 3), dtype=np.float32)   # covariance matrix of entire halo
+        self.eig = np.empty((3, 3), dtype=np.float32)    # eigenvectors of entire halo
+        self.evals = np.empty(3, dtype=np.float32)       # eigenvalues of entire halo
+        self.inner_cov = np.empty((3, 3), dtype=np.float32)   # covariance matrix of half mass halo
+        self.inner_eig = np.empty((3, 3), dtype=np.float32)    # eigenvectors of half mass halo
+        self.inner_evals = np.empty(3, dtype=np.float32)       # eigenvalues of half mass halo
         self.radii = np.empty(len(self.particles), dtype=np.float32)    # ellipsoidal radii of particles
         self.half_mass_radius = np.float32(0)                                  # ellipsoidal radius of hald mass sub-halo
         self.fig = None
@@ -118,7 +121,9 @@ class Halo:
         eigenvals, eigvecs = np.linalg.eig(self.cov)
         order = np.argsort(eigenvals)[::-1]
         self.evals = np.sort(eigenvals)[::-1]
+        self.inner_evals = self.evals
         self.eig = np.vstack((eigvecs[:, order[0]], eigvecs[:, order[1]], eigvecs[:, order[2]])).T
+        self.inner_eig = self.eig
     
     def convert_basis(self, basis=None):
         """
@@ -164,6 +169,7 @@ class Halo:
             self.half_mass_radius = np.float32((radii[int(l/2)] + radii[(l-2)/2])/2.0)
         else:
             self.half_mass_radius = np.float32(radii[int((l-1)/2.0)])
+        return self.half_mass_radius
     
     def higher_order_fit(self, order=2):
         """
@@ -174,10 +180,14 @@ class Halo:
         for i in range(1, order):
             indices, _ = self.cut()
             coords =  zip(self.particlesn.x[indices], self.particlesn.y[indices], self.particlesn.z[indices])
-            h = Halo(i='subhalo', pos=(0,0,0), particles=np.array(coords, dtype=self.coord_type).view(np.recarray))
+            h = Halo(id='subhalo', pos=(0,0,0), particles=np.array(coords, dtype=self.coord_type).view(np.recarray))
             h.get_covariance_matrix()
             h.get_eigenvectors()
+            self.inner_cov = h.cov
+            self.inner_evals = h.evals
+            self.inner_eig = h.eig
             self.get_radii(evals=h.evals)
+        self.get_half_mass_radius()
     
     def encapsulation(self):
         """
@@ -232,10 +242,12 @@ class Halo:
 
     def _draw_ellipsoids(self, indices, mode):
         ax = self.fig
-        if mode == 'cleave':
+        if mode == 'cleave':            # ellipsoid radii determined on farthest points
             radii = [self.cleave(indices[0]), self.cleave(np.append(indices[1], indices[0]))]
-        else:
-            # TODO: plot by half_mass_radius based on new and old eigenvalues
+        elif mode == 'eval':            # ellipsoid radii determined on distribution eigenvalues
+            radii = [np.array((tuple(self.inner_evals * self.half_mass_radius / np.amax(self.inner_evals))), dtype=Halo.coord_type).view(np.recarray), \
+                        np.array((tuple(self.evals * np.amax(self.radii) / np.amax(self.evals))), dtype=Halo.coord_type).view(np.recarray)]
+                        
         colors = ('r', 'c')
         alpha = 0.3
         
