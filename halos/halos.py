@@ -185,9 +185,9 @@ class Halo:
         """
         indices, _ = self.cut()
         r = self.cleave(indices)
-        norm_evals = self.evals / np.amax(self.evals)
-        R = np.sqrt(np.sum(np.square(norm_evals * np.array([r.x, r.y, r.z]))))
-        total = np.sum(np.where(self.radii[indices]>R, 1, 0))
+        coords = np.array(zip(self.particlesn.x[indices], self.particlesn.y[indices], self.particlesn.z[indices])).T
+        r2 = np.einsum('ij,ij->j', coords, coords)
+        total = np.sum(np.where(r2>self.half_mass_radius, 0, 1))
         return total / float(len(indices))
     
     def cut(self, fraction=1.0):
