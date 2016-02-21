@@ -186,7 +186,7 @@ class Halo:
         indices, _ = self.cut()
         r = self.cleave(indices)
         coords = np.array(zip(self.particlesn.x[indices], self.particlesn.y[indices], self.particlesn.z[indices])).T
-        r2 = np.einsum('ij,ij->j', coords, coords)
+        r2 = np.sqrt(np.einsum('ij,ij->j', coords, coords))
         total = np.sum(np.where(r2>self.half_mass_radius, 0, 1))
         return total / float(len(indices))
     
@@ -215,7 +215,7 @@ class Halo:
         Rz = np.amax(np.absolute(self.particlesn.z[indices]))
         return np.array((Rx, Ry, Rz), dtype=Halo.coord_type).view(np.recarray)
 
-    def visualize(self, ellipsoids=False, fraction=1.0):
+    def visualize(self, ellipsoids=False, mode='cleave', fraction=1.0):
         """
         3D plot of particles. Particles within half mass radius are in red. Others are in blue.
         :fraction fraction of particles to show (1.0 means 100%)
@@ -226,13 +226,16 @@ class Halo:
         self.fig.scatter(self.particlesn.x[firsthalf], self.particlesn.y[firsthalf], self.particlesn.z[firsthalf], c='r')
         self.fig.scatter(self.particlesn.x[secondhalf], self.particlesn.y[secondhalf], self.particlesn.z[secondhalf], c='b')
         if ellipsoids:
-            self._draw_ellipsoids((firsthalf, secondhalf))
+            self._draw_ellipsoids((firsthalf, secondhalf), mode)
         plt.show()
         plt.close()
 
-    def _draw_ellipsoids(self, indices):
+    def _draw_ellipsoids(self, indices, mode):
         ax = self.fig
-        radii = [self.cleave(indices[0]), self.cleave(np.append(indices[1], indices[0]))]
+        if mode == 'cleave':
+            radii = [self.cleave(indices[0]), self.cleave(np.append(indices[1], indices[0]))]
+        else:
+            # TODO: plot by half_mass_radius based on new and old eigenvalues
         colors = ('r', 'c')
         alpha = 0.3
         

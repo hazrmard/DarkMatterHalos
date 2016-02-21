@@ -29,21 +29,21 @@ def _redestribute(a, pdf=lambda x: x):
     return a_new
 
 
-def shell(n=100, r=(10, 10, 10)):
+def shell(n=100, dims=(10, 10, 10), center=(0,0,0)):
     theta, phi = _gen_angles(n)
-    x = r[0] * np.sin(theta) * np.cos(phi)
-    y = r[1] * np.sin(theta) * np.sin(phi)
-    z = r[2] * np.cos(theta)
-    return x, y, z
+    x = dims[0] * np.sin(theta) * np.cos(phi)
+    y = dims[1] * np.sin(theta) * np.sin(phi)
+    z = dims[2] * np.cos(theta)
+    return helpers.create_halo('shell', (0,0,0), x, y, z)
 
 
-def two_shells(n=(100, 100), r=(10, 10, 10), scale=0.5):
-    x, y, z = shell(n[0], (r[0]*scale, r[1]*scale, r[2]*scale))
-    x2, y2, z2 = shell(n[1], r)
-    x = np.append(x, x2)
-    y = np.append(y, y2)
-    z = np.append(z, z2)
-    return x, y, z
+def two_shells(n=(100, 100), dims=(10, 10, 10), center=(0,0,0), scale=0.5):
+    h1 = shell(n=n[0], center=(dims[0]*scale, dims[1]*scale, dims[2]*scale))
+    h2 = shell(n[1], (dims[0], dims[1], dims[2]))
+    x = np.append(h1.particles.x, h2.particles.x) + center[0]
+    y = np.append(h1.particles.y, h2.particles.y) + center[1]
+    z = np.append(h1.particles.z, h2.particles.z) + center[2]
+    return helpers.create_halo('two-shells', (0,0,0), x, y, z)
 
     
 def random_rect(n=100, dims=(10,10,10), center=(0,0,0)):
