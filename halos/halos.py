@@ -124,7 +124,7 @@ class Halo:
         self.evals = np.sort(eigenvals)[::-1]
         self.inner_evals = self.evals
         self.eig = np.vstack((eigvecs[:, order[0]], eigvecs[:, order[1]], eigvecs[:, order[2]])).T
-        self.inner_eig = self.eig
+        #self.inner_eig = self.eig
     
     def convert_basis(self, basis=None):
         """
@@ -183,30 +183,46 @@ class Halo:
         """
         for i in range(1, order):
             indices, _ = self.cut()
+            # halo of only inner particles
             coords =  zip(self.particlesn.x[indices], self.particlesn.y[indices], self.particlesn.z[indices])
             h = Halo(id='subhalo', pos=(0,0,0), particles=np.array(coords, dtype=self.coord_type).view(np.recarray))
-            h.get_covariance_matrix()
+            # copy of self
+            othercoords =  zip(self.particlesn.x, self.particlesn.y, self.particlesn.z)
+            H = Halo(id='otherhalo', pos=(0,0,0), particles=np.array(othercoords, dtype=self.coord_type).view(np.recarray))
+            
+            h.get_covariance_matrix()               # calculate descriptors of inner halo
             h.get_eigenvectors()
-            h.convert_basis()
-            h.get_radii()
+            
+            H.convert_basis(basis=h.eig)           # transform copy of self into new descriptors
+            H.get_radii(evals=h.evals)
+            indices, _ = H.cut()                         # find new 'inner' particles
+            
             self.inner_cov = h.cov
             self.inner_evals = h.evals
             self.inner_eig = h.eig
-        indices, _ = self.cut()
-        self.radii[indices] = h.radii               # reassign subhalo radii to current halo's inner radii
+            self.radii[indices] = H.radii[indices]  # reassign subhalo radii to current halo's inner radii
+            
         self.get_half_mass_radius()
         self.inner_R = h.cleave()
     
-    def encapsulation(self):
+    def encapsulation(self, mode='cleave', transform=True):
         """
         Get a percentage of points that are not encapsulated by the ellipsoid, but should be.
         """
-        indices, _ = self.cut()
-        r = self.cleave(indices)
-        coords = np.array(zip(self.particlesn.x[indices], self.particlesn.y[indices], self.particlesn.z[indices])).T
-        r2 = np.sqrt(np.einsum('ij,ij->j', coords, coords))
-        total = np.sum(np.where(r2>self.half_mass_radius, 0, 1))
-        return total / float(len(indices))
+        if mode=='cleave':
+            indices, _ = self.cut()
+            t_matrix = np.identity(3) if not transform else np.linalg.inv(self.inner_eig)
+            
+            coords = np.array(zip(self.particlesn.x[indices], self.particlesn.y[indices], self.particlesn.z[indices])).T
+            coords = np.dot(t_matrix, coords)
+            
+            ell_R = np.array([1./self.inner_R.x**2,  1./self.inner_R.y**2, 1./self.inner_R.z**2])
+            coords2 = coords * coords
+            ell_coords = np.dot(ell_R, coords2)
+            r2 = np.einsum('ij->j', coords)
+            total = np.sum(np.where(r2<=1, 1, 0))
+            
+            return format(total / float(len(indices)), '0.2f')
     
     def cut(self, fraction=1.0):
         """
@@ -216,8 +232,8 @@ class Halo:
         """
         sortedindices = np.array(np.argsort(self.radii))
         l = int(len(sortedindices)/2)
-        firsthalf = np.random.choice(sortedindices[:l], size=int(l*fraction))
-        secondhalf = np.random.choice(sortedindices[l:], size=len(sortedindices)-int(l*fraction))
+        firsthalf = np.random.choice(sortedindices[:l], replace=False, size=int(l*fraction))
+        secondhalf = np.random.choice(sortedindices[l:], replace=False, size=len(sortedindices)-int(l*fraction))
         return firsthalf, secondhalf
     
     def cleave(self, indices=None):
@@ -233,7 +249,7 @@ class Halo:
         Rz = np.amax(np.absolute(self.particlesn.z[indices]))
         return np.array((Rx, Ry, Rz), dtype=Halo.coord_type).view(np.recarray)
 
-    def visualize(self, ellipsoids=False, mode='cleave', transform=False, fraction=1.0):
+    def visualize(self, ellipsoids=False, mode='cleave', transform=True, fraction=1.0):
         """
         3D plot of particles. Particles within half mass radius are in red. Others are in blue.
         :fraction fraction of particles to show (1.0 means 100%)
@@ -248,7 +264,7 @@ class Halo:
         plt.show()
         plt.close()
 
-    def _draw_ellipsoids(self, indices, mode, transform=False):
+    def _draw_ellipsoids(self, indices, mode, transform=True):
         ax = self.fig
         
         transforms = [np.identity(3), np.identity(3)]
@@ -284,19 +300,28 @@ class Halo:
         Prints some stats about the halo
         """
         R = self.cleave()
-        angles = np.arccos(np.einsum('ij,ij->j', self.inner_eig, self.eig))/np.pi
-        angles = [format(a, '0.2f') + 'pi' for a in angles]
+        try:
+            angles = np.arccos(np.einsum('ij,ij->j', self.inner_eig, self.eig))/np.pi
+        except RuntimeWarning:
+            angles = np.array([0,0,0])
+        angles = [self._fmt(a) + 'pi' for a in angles]
         print '=' * 60        
         print
         print '    Halo ID:\t\t\t' + str(self.id)
         print '    Particles:\t\t\t' + str(len(self.particles))
         print '    Half Mass Radius:\t\t' + str(self.half_mass_radius)
         print 
-        print '    Approx. Halo Dimensions:\t' + format(float(R.x), '0.2f') + ' x ' + format(float(R.y), '0.2f') + ' x '  + format(float(R.z), '0.2f')
-        print '    Halo eigenvalues:\t\t' + format(self.evals[0],'0.2f') + ', ' + format(self.evals[1],'0.2f') + ', ' + format(self.evals[2],'0.2f')
+        print '    Approx. Halo Dimensions:\t' + self._fmt(float(R.x)) + ' x ' + self._fmt(float(R.y)) + ' x '  + self._fmt(float(R.z))
+        print '    Halo eigenvalues:\t\t' + self._fmt(self.evals[0]) + ', ' + self._fmt(self.evals[1]) + ', ' + self._fmt(self.evals[2])
         print
-        print '    Approx inner dimensions:\t' + format(float(self.inner_R.x), '0.2f') + ' x ' + format(float(self.inner_R.y), '0.2f') + ' x '  + format(float(self.inner_R.z), '0.2f')
-        print '    Inner eigenvalues:\t\t' + format(self.inner_evals[0],'0.2f') + ', ' + format(self.inner_evals[1],'0.2f') + ', ' + format(self.inner_evals[2],'0.2f')
+        print '    Approx inner dimensions:\t' + self._fmt(float(self.inner_R.x)) + ' x ' + self._fmt(float(self.inner_R.y)) + ' x '  + self._fmt(float(self.inner_R.z))
+        print '    Inner eigenvalues:\t\t' + self._fmt(self.inner_evals[0]) + ', ' + self._fmt(self.inner_evals[1]) + ', ' + self._fmt(self.inner_evals[2])
         print '    Inner basis rotation:\t' + 'x->x ' + angles[0] + '; y->y ' + angles[1]  + '; z->z ' + angles[2]
         print
         print '=' * 60
+    
+    def _fmt(self, num, precision=2):
+        """returns formated number according to precision
+        """
+        f_string = '{:.' + str(precision) + 'e}'
+        return f_string.format(num)
