@@ -63,10 +63,17 @@ Finally, the halo can be visualized with an ellipsoidal fit:
 ```python
 # default mode='cleave', also mode='eval'; default transform=False
 h.visualize(ellipsoids=True, mode='cleave', transform=True)     
-```  
+``` 
+
 `cleave` uses absolute maximum projections of particles along each principal axis to draw ellipsoids. `eval` uses halo eigenvalues
 to calculate ellipsoid dimensions. `transform=True` rotates inner halo to represent measured distribution of inner particles only,
 otherwise the orientation of the inner halo is assumed to be the same as the rest of the particles.  
+  
+To get stats about the halo on the console:
+```python
+h.report()
+```
+  
 There are several helper functions in `halos.gendata` module for generating random particle distributions. Please look at source code documentation for more details.  
 This project is under active development and function behavior may change significantly in the future.
 
