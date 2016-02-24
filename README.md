@@ -61,8 +61,8 @@ h.higher_order_fit(ORDER)     # 2,3,4...
 ```
 Finally, the halo can be visualized with an ellipsoidal fit:
 ```python
-# default mode='cleave', also mode='eval'; default transform=False
-h.visualize(ellipsoids=True, mode='cleave', transform=True)     
+# default mode='cleave', also mode='eval'; default transform=True
+h.visualize(ellipsoids=True, mode='cleave', transform=False)     
 ``` 
 
 `cleave` uses absolute maximum projections of particles along each principal axis to draw ellipsoids. `eval` uses halo eigenvalues
