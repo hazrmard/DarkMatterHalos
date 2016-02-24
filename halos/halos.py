@@ -5,6 +5,7 @@ import numpy as np
 import warnings
 import matplotlib.pyplot as plt
 import bgc2
+import config
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -12,8 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D
 #plt.hold(True)
 warnings.simplefilter('error', RuntimeWarning)      # raise exception on RuntimeWarning
 
-COORDS = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32)])    # coordinates data type
-
+COORDS = config.COORDS
 
 class HalfMassRadius:
     def __init__(self, file):
@@ -58,6 +58,11 @@ class HalfMassRadius:
         for halo in self.halos:
             halo.get_eigenvectors()
         print "eigenvectors computed"
+    
+    def convert_bases(self):
+        for halo in self.halos:
+            halo.convert_basis()
+        print "bases converted"
 
     def get_radii(self):
         for halo in self.halos:
@@ -72,23 +77,27 @@ class HalfMassRadius:
 
     def get_half_mass_radii(self):
         for halo in self.halos:
-            halo.get_half_mass_radius()
+            _ = halo.get_half_mass_radius()
         print "half mass radii computed"
 
 
 class Halo:
     coord_type = COORDS 
 
-    def __init__(self, i, pos, particles):
-        self.id = i
+    def __init__(self, id, pos, particles):
+        self.id = id
         self.pos = np.array(pos, dtype=Halo.coord_type).view(np.recarray)
         self.particles = particles  # record array of particles (see halos/helpers/helpers.py -> create_halo())
-        self.particlesn = particles # currently not in use
-        self.cov = np.empty((3, 3), dtype=np.float32)
-        self.eig = np.empty((3, 3), dtype=np.float32)
-        self.evals = np.empty(3, dtype=np.float32)
-        self.radii = np.empty(len(self.particles), dtype=np.float32)
-        self.half_mass_radius = np.float32(0)
+        self.particlesn = particles     # record array of particles transformed to new basis
+        self.cov = np.identity(3, dtype=np.float32)   # covariance matrix of entire halo
+        self.eig = np.identity(3, dtype=np.float32)    # eigenvectors of entire halo
+        self.evals = np.empty(3, dtype=np.float32)       # eigenvalues of entire halo
+        self.inner_cov = np.identity(3, dtype=np.float32)   # covariance matrix of half mass halo
+        self.inner_eig = np.identity(3, dtype=np.float32)    # eigenvectors of half mass halo
+        self.inner_evals = np.empty(3, dtype=np.float32)       # eigenvalues of half mass halo
+        self.radii = np.empty(len(self.particles), dtype=np.float32)    # ellipsoidal radii of particles
+        self.half_mass_radius = np.float32(0)                                  # ellipsoidal radius of hald mass sub-halo
+        self.inner_R = np.array((0,0,0), dtype=Halo.coord_type)       # principal axis dimensions for inner halo
         self.fig = None
 
     def center_halo(self):
@@ -113,7 +122,20 @@ class Halo:
         eigenvals, eigvecs = np.linalg.eig(self.cov)
         order = np.argsort(eigenvals)[::-1]
         self.evals = np.sort(eigenvals)[::-1]
+        self.inner_evals = self.evals
         self.eig = np.vstack((eigvecs[:, order[0]], eigvecs[:, order[1]], eigvecs[:, order[2]])).T
+        #self.inner_eig = self.eig
+    
+    def convert_basis(self, basis=None):
+        """
+        Transform particles to new basis defined by eigenvectors.
+        :basis 3 x 3 np array of new basis column vectors
+        """
+        basis = self.eig if basis is None else basis
+        coords = np.array(zip(self.particles.x, self.particles.y, self.particles.z))    # n x 3 matrix
+        e_1 = np.linalg.inv(basis)                     # inverse eigenvector matrix
+        e_1c = np.dot(e_1, coords.T)               # points transformed to the new basis.
+        self.particlesn = np.array(zip(*e_1c), dtype=COORDS).view(np.recarray)
 
     def get_radii_2(self):          # depracated approach to finding ellipsoid fit. Use get_radii()
         """
@@ -126,19 +148,20 @@ class Halo:
         invdet = np.linalg.det(self.cov)
         self.radii = np.sqrt(np.einsum('ij,ji->i', coords, np.dot(invcov / invdet, coords.T)))
 
-    def get_radii(self):
+    def get_radii(self, evals=None):
         """
         The points are first transformed into a basis defined by the eigenvectors of the covariance matrix.
         Using equation ax^2 + by^2 + cz^2 = er where a, b, and c are normalized eigenvalues of the covariance matrix.
         """
-        coords = np.array(zip(self.particles.x, self.particles.y, self.particles.z))    # n x 3 matrix
-        e_1 = np.linalg.inv(self.eig)              # inverse eigenvector matrix
-        e_1c = np.dot(e_1, coords.T)               # points transformed to the new basis.
-        self.particlesn = np.array(zip(*e_1c), dtype=COORDS).view(np.recarray)               # store new basis particles
-        e_1c2 = e_1c * e_1c                        # squared coordinates. In column vectors ([x^2],[y^2],[z^2])wh
-        w = np.diag(self.evals) / max(self.evals)  # normalized diagonal matrix containing eigenvalues of covariance matrix
-        we_1c2 = np.dot(w, e_1c2)                  # weighted squared coords. In column vectors ([ax^2],[by^2],[cz^2])
-        self.radii = np.sqrt(np.einsum('ij->j', we_1c2))    # sqrt of sum of weighted squared coordinates
+        evals = self.evals if evals is None else evals
+        coords = np.array(zip(self.particlesn.x, self.particlesn.y, self.particlesn.z)).T    # 3 x n matrix
+        c2 = coords * coords                        # squared coordinates. In column vectors ([x^2],[y^2],[z^2])
+        w = np.diag(evals) / max(evals)        # normalized diagonal matrix containing eigenvalues of covariance matrix
+        wc2 = np.dot(w, c2)                          # weighted squared coords. In column vectors ([ax^2],[by^2],[cz^2])
+        self.radii = np.sqrt(np.einsum('ij->j', wc2))    # sqrt of sum of weighted squared coordinates
+        
+        indices, _ = self.cut()
+        self.inner_R = self.cleave(indices)       # calculate dimensions of inner halo
 
     def get_half_mass_radius(self):
         """
@@ -150,6 +173,56 @@ class Halo:
             self.half_mass_radius = np.float32((radii[int(l/2)] + radii[(l-2)/2])/2.0)
         else:
             self.half_mass_radius = np.float32(radii[int((l-1)/2.0)])
+        return self.half_mass_radius
+    
+    def higher_order_fit(self, order=2):
+        """
+        Create sub-halo from particles inside half-mass radius, recompute covariance matrix, recalculate particles
+        inside half-mass radius, repeat.
+        :order number of times -1 to repeat
+        """
+        for i in range(1, order):
+            indices, _ = self.cut()
+            # halo of only inner particles
+            coords =  zip(self.particlesn.x[indices], self.particlesn.y[indices], self.particlesn.z[indices])
+            h = Halo(id='subhalo', pos=(0,0,0), particles=np.array(coords, dtype=self.coord_type).view(np.recarray))
+            # copy of self
+            othercoords =  zip(self.particlesn.x, self.particlesn.y, self.particlesn.z)
+            H = Halo(id='otherhalo', pos=(0,0,0), particles=np.array(othercoords, dtype=self.coord_type).view(np.recarray))
+            
+            h.get_covariance_matrix()               # calculate descriptors of inner halo
+            h.get_eigenvectors()
+            
+            H.convert_basis(basis=h.eig)           # transform copy of self into new descriptors
+            H.get_radii(evals=h.evals)
+            indices, _ = H.cut()                         # find new 'inner' particles
+            
+            self.inner_cov = h.cov
+            self.inner_evals = h.evals
+            self.inner_eig = h.eig
+            self.radii[indices] = H.radii[indices]  # reassign subhalo radii to current halo's inner radii
+            
+        self.get_half_mass_radius()
+        self.inner_R = h.cleave()
+    
+    def encapsulation(self, mode='cleave', transform=True):
+        """
+        Get a percentage of points that are not encapsulated by the ellipsoid, but should be.
+        """
+        if mode=='cleave':
+            indices, _ = self.cut()
+            t_matrix = np.identity(3) if not transform else np.linalg.inv(self.inner_eig)
+            
+            coords = np.array(zip(self.particlesn.x[indices], self.particlesn.y[indices], self.particlesn.z[indices])).T
+            coords = np.dot(t_matrix, coords)
+            
+            ell_R = np.array([1./self.inner_R.x**2,  1./self.inner_R.y**2, 1./self.inner_R.z**2])
+            coords2 = coords * coords
+            ell_coords = np.dot(ell_R, coords2)
+            r2 = np.einsum('ij->j', coords)
+            total = np.sum(np.where(r2<=1, 1, 0))
+            
+            return format(total / float(len(indices)), '0.2f')
     
     def cut(self, fraction=1.0):
         """
@@ -159,8 +232,8 @@ class Halo:
         """
         sortedindices = np.array(np.argsort(self.radii))
         l = int(len(sortedindices)/2)
-        firsthalf = np.random.choice(sortedindices[:l], size=int(l*fraction))
-        secondhalf = np.random.choice(sortedindices[l:], size=len(sortedindices)-int(l*fraction))
+        firsthalf = np.random.choice(sortedindices[:l], replace=False, size=int(l*fraction))
+        secondhalf = np.random.choice(sortedindices[l:], replace=False, size=len(sortedindices)-int(l*fraction))
         return firsthalf, secondhalf
     
     def cleave(self, indices=None):
@@ -176,7 +249,7 @@ class Halo:
         Rz = np.amax(np.absolute(self.particlesn.z[indices]))
         return np.array((Rx, Ry, Rz), dtype=Halo.coord_type).view(np.recarray)
 
-    def visualize(self, ellipsoids=False, fraction=1.0):
+    def visualize(self, ellipsoids=False, mode='cleave', transform=True, fraction=1.0):
         """
         3D plot of particles. Particles within half mass radius are in red. Others are in blue.
         :fraction fraction of particles to show (1.0 means 100%)
@@ -187,28 +260,68 @@ class Halo:
         self.fig.scatter(self.particlesn.x[firsthalf], self.particlesn.y[firsthalf], self.particlesn.z[firsthalf], c='r')
         self.fig.scatter(self.particlesn.x[secondhalf], self.particlesn.y[secondhalf], self.particlesn.z[secondhalf], c='b')
         if ellipsoids:
-            self._draw_ellipsoids((firsthalf, secondhalf))
+            self._draw_ellipsoids((firsthalf, secondhalf), mode, transform)
         plt.show()
         plt.close()
 
-    def _draw_ellipsoids(self, indices):
+    def _draw_ellipsoids(self, indices, mode, transform=True):
         ax = self.fig
-        radii = [self.cleave(indices[0]), self.cleave(indices[1])]
+        
+        transforms = [np.identity(3), np.identity(3)]
+        
+        if mode == 'cleave':            # ellipsoid radii determined on farthest points
+            radii = [self.inner_R, self.cleave()] if transform else [self.cleave(indices[0]), self.cleave()]
+        elif mode == 'eval':            # ellipsoid radii determined on distribution eigenvalues
+            radii = [np.array((tuple(self.inner_evals * self.half_mass_radius / np.amax(self.inner_evals))), dtype=Halo.coord_type).view(np.recarray), \
+                        np.array((tuple(self.evals * np.amax(self.radii) / np.amax(self.evals))), dtype=Halo.coord_type).view(np.recarray)]
+        
+        transforms = [self.inner_eig, np.identity(3)] if transform else transforms
+                        
         colors = ('r', 'c')
         alpha = 0.3
         
         u = np.linspace(0, 2 * np.pi, 100)              # generate ellipsoid surface data parametrically
         v = np.linspace(0, np.pi, 100)
         
-        for r, c in zip(radii, colors):            
+        for r, c, t in zip(radii, colors, transforms):            
             x = r.x * np.outer(np.cos(u), np.sin(v))
             y = r.y * np.outer(np.sin(u), np.sin(v))
             z = r.z * np.outer(np.ones_like(u), np.cos(v))
-            tcoords = np.dot(np.identity(3), np.array(zip(x, y, z)).T)        # ellipsoid coordinates
+            tcoords = np.dot(t, np.array(zip(x, y, z)).T)        # ellipsoid coordinates
             ax.plot_surface(tcoords[0, :], tcoords[1, :], tcoords[2, :], rstride=4, cstride=4, color=c, alpha=alpha)
             alpha /= 2.0
         max_r = np.amax([radii[1].x, radii[1].y, radii[1].z])
         ax.set_xlim3d(-max_r, max_r)   # set axes limits
         ax.set_ylim3d(-max_r, max_r)
         ax.set_zlim3d(-max_r, max_r)
-
+    
+    def report(self):
+        """
+        Prints some stats about the halo
+        """
+        R = self.cleave()
+        try:
+            angles = np.arccos(np.einsum('ij,ij->j', self.inner_eig, self.eig))/np.pi
+        except RuntimeWarning:
+            angles = np.array([0,0,0])
+        angles = [self._fmt(a) + 'pi' for a in angles]
+        print '=' * 60        
+        print
+        print '    Halo ID:\t\t\t' + str(self.id)
+        print '    Particles:\t\t\t' + str(len(self.particles))
+        print '    Half Mass Radius:\t\t' + str(self.half_mass_radius)
+        print 
+        print '    Approx. Halo Dimensions:\t' + self._fmt(float(R.x)) + ' x ' + self._fmt(float(R.y)) + ' x '  + self._fmt(float(R.z))
+        print '    Halo eigenvalues:\t\t' + self._fmt(self.evals[0]) + ', ' + self._fmt(self.evals[1]) + ', ' + self._fmt(self.evals[2])
+        print
+        print '    Approx inner dimensions:\t' + self._fmt(float(self.inner_R.x)) + ' x ' + self._fmt(float(self.inner_R.y)) + ' x '  + self._fmt(float(self.inner_R.z))
+        print '    Inner eigenvalues:\t\t' + self._fmt(self.inner_evals[0]) + ', ' + self._fmt(self.inner_evals[1]) + ', ' + self._fmt(self.inner_evals[2])
+        print '    Inner basis rotation:\t' + 'x->x ' + angles[0] + '; y->y ' + angles[1]  + '; z->z ' + angles[2]
+        print
+        print '=' * 60
+    
+    def _fmt(self, num, precision=2):
+        """returns formated number according to precision
+        """
+        f_string = '{:.' + str(precision) + 'e}'
+        return f_string.format(num)

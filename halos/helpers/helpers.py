@@ -1,31 +1,9 @@
 import numpy as np
-from ..halos import Halo
-
-_default_ascii_settings = {'dtype': Halo.coord_type,
-                           'comments':'#',
-                           'delimiter':None,
-                           'skip_header': 1,
-                           'skip_footer':0,   #   cannot be used together with 'max_rows' argument
-                           'converters':None,
-                           'missing_values':None,
-                           'filling_values':None,
-                           'usecols': (1, 2, 3),
-                           'names':None,
-                           'excludelist':None,
-                           'deletechars':None,
-                           'replace_space':'_',
-                           'autostrip':False,
-                           'case_sensitive':True,
-                           'defaultfmt':'f%i',
-                           'unpack':None,
-                           'usemask':False,
-                           'loose':True,
-                           'invalid_raise':True,
-                           # 'max_rows':200
-                           }
+from .. import config
+from .. import halos
 
 
-def read_ascii_pos(filepath='', settings=_default_ascii_settings):
+def read_ascii_pos(filepath='', settings=config._default_ascii_settings):
     """
     this function reads columns from an ascii file into a numpy array
     :param filepath: path of file
@@ -49,5 +27,5 @@ def create_halo(haloid, halocenter, halox, haloy, haloz):
     :return: a Halo instance
     """
     coords = zip(halox, haloy, haloz)
-    h = Halo(haloid, halocenter, np.array(coords, dtype=Halo.coord_type).view(np.recarray))
+    h = halos.Halo(haloid, halocenter, np.array(coords, dtype=config.COORDS).view(np.recarray))
     return h

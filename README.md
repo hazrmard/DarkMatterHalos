@@ -27,8 +27,9 @@ H.filter(minimum=10)                      # Leave out halos with < 10 particles
 H.center_halos()                          # (1) Translate all halos around center points
 H.get_covariance_matrices()               # (2)
 H.get_eigenvectors()                      # (3)
-H.get_radii()                             # (4)
-H.get_half_mass_radii()                   # (5) 1-5 are intended to be run in order
+H.convert_bases()                         # (4)
+H.get_radii()                             # (5)
+H.get_half_mass_radii()                   # (6) 1-6 are intended to be run in order
 ```
   
 The fundamental object computed on is the `Halo`. The above class `HalfMassRadius` in its function calls simply iterates over `Halo` objects in `HalfMassRadius().halos`. A `Halo` can either be instantiated from an ascii data file or by passing coordinates:
@@ -49,13 +50,30 @@ h = halos.Halo('halo_id', pos=(0,0,0), particles=coords)
 h.center_halo()
 h.get_covariance_matrix()
 h.get_eigenvectors()
+h.convert_basis()
 h.get_radii()
 h.get_half_mass_radius()
+```  
+  
+For higher order fitting:
+```python
+h.higher_order_fit(ORDER)     # 2,3,4...
 ```
 Finally, the halo can be visualized with an ellipsoidal fit:
 ```python
-h.visualize(ellipsoids=True)
+# default mode='cleave', also mode='eval'; default transform=True
+h.visualize(ellipsoids=True, mode='cleave', transform=False)     
+``` 
+
+`cleave` uses absolute maximum projections of particles along each principal axis to draw ellipsoids. `eval` uses halo eigenvalues
+to calculate ellipsoid dimensions. `transform=True` rotates inner halo to represent measured distribution of inner particles only,
+otherwise the orientation of the inner halo is assumed to be the same as the rest of the particles.  
+  
+To get stats about the halo on the console:
+```python
+h.report()
 ```
+  
 There are several helper functions in `halos.gendata` module for generating random particle distributions. Please look at source code documentation for more details.  
 This project is under active development and function behavior may change significantly in the future.
 
