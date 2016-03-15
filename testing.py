@@ -21,7 +21,7 @@ def bgc2_test(path='..\data\halos_0.1.bgc2'):
     t.convert_bases()
     t.get_radii()    # center_halo(), get_covariance_matrices() and get_eigenvectors() functions must be called before
     t.get_half_mass_radii()
-    return t        # t.halos is a list of halos contained inside the bgc2 file    
+    return t        # t.halos is a list of halos contained inside the bgc2 file
 
 
 def ascii_test(path='..\data\ellipsoid.dat'):
@@ -36,7 +36,7 @@ def ascii_test(path='..\data\ellipsoid.dat'):
     print 'execution time: ', time.clock()-s_time
     return h
 
-    
+
 def do_all(halo):
     """
     take a halo instance and take it through all functions necessary for calculating half mass radius.
@@ -52,6 +52,27 @@ def do_all(halo):
     halo.get_half_mass_radius()
     print 'finished, execution time: ', time.clock()-s_time
     return halo
+
+
+def eval_cleave_test(H,order):
+    """
+    takes a group of halos and checks how well radii ratios based on eigenvalues
+    fit with ratios based on maximum dimensions. Assumes halos are NOT self-similar
+    i.e. transform=True.
+    eigenvalue ratio = ratio of median and max evals along principal axis
+    dimension ratio = ratio of x dimension of inner halo to all halo particles
+    :H a HalfMassRadius instance
+    :order order of fitting
+    """
+    H.higher_order_fit(order=order)
+    e_ratio = [h.half_mass_radius/max(h.radii) for h in H.halos]
+    d_ratio = [h.inner_R.x/h.cleave().x for h in H.halos]
+    corr_coeff = np.corrcoef(e_ratio, d_ratio)
+    plt.scatter(e_ratio, d_ratio, alpha=0.3)
+    plt.xlabel('Eigenvalue ratios')
+    plt.ylabel('Dimension ratios')
+    plt.suptitle('Correlation Coefficient: ' + str(corr_coeff[0,1]))
+    plt.show()
 
 # Generating a sample halo without ascii or bgc2 file
 # x = [1,2,3,4,5]
