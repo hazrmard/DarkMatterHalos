@@ -2,7 +2,8 @@ __author__ = 'Ibrahim'
 
 # This file contains examples of functions that can be used to process halo data.
 
-from halos import *     # contains helpers and gendata modules
+from halos import *
+from halos.helpers import *
 import time
 
 
@@ -14,7 +15,7 @@ def bgc2_test(path='..\data\halos_0.1.bgc2'):
     """
     t = HalfMassRadius(path)
     t.read_data()
-    t.filter(4)         # filter out halos w/ less than 4 particles
+    t.filter(100)         # filter out halos w/ less than 4 particles
     t.center_halos()
     t.get_covariance_matrices()
     t.get_eigenvectors()
@@ -35,44 +36,6 @@ def ascii_test(path='..\data\ellipsoid.dat'):
     h = Halo('test', (0, 0, 0), coords)
     print 'execution time: ', time.clock()-s_time
     return h
-
-
-def do_all(halo):
-    """
-    take a halo instance and take it through all functions necessary for calculating half mass radius.
-    Returns halo instance with finished calculations.
-    """
-    s_time = time.clock()
-    print 'beginning processing of halo:', halo.id
-    halo.center_halo()
-    halo.get_covariance_matrix()
-    halo.get_eigenvectors()
-    halo.convert_basis()
-    halo.get_radii()
-    halo.get_half_mass_radius()
-    print 'finished, execution time: ', time.clock()-s_time
-    return halo
-
-
-def eval_cleave_test(H,order):
-    """
-    takes a group of halos and checks how well radii ratios based on eigenvalues
-    fit with ratios based on maximum dimensions. Assumes halos are NOT self-similar
-    i.e. transform=True.
-    eigenvalue ratio = ratio of median and max evals along principal axis
-    dimension ratio = ratio of x dimension of inner halo to all halo particles
-    :H a HalfMassRadius instance
-    :order order of fitting
-    """
-    H.higher_order_fit(order=order)
-    e_ratio = [h.half_mass_radius/max(h.radii) for h in H.halos]
-    d_ratio = [h.inner_R.x/h.cleave().x for h in H.halos]
-    corr_coeff = np.corrcoef(e_ratio, d_ratio)
-    plt.scatter(e_ratio, d_ratio, alpha=0.3)
-    plt.xlabel('Eigenvalue ratios')
-    plt.ylabel('Dimension ratios')
-    plt.suptitle('Correlation Coefficient: ' + str(corr_coeff[0,1]))
-    plt.show()
 
 # Generating a sample halo without ascii or bgc2 file
 # x = [1,2,3,4,5]
