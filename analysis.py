@@ -3,7 +3,7 @@ from halos.helpers import *
 #from scipy import stats
 
 
-def eval_cleave_test(H,order):
+def eval_vs_cleave(H,order=1):
     """
     takes a group of halos and checks how well radii ratios based on eigenvalues
     fit with ratios based on maximum dimensions. Assumes halos are NOT self-similar
@@ -20,18 +20,20 @@ def eval_cleave_test(H,order):
     plt.scatter(e_ratio, d_ratio, alpha=0.3)
     plt.xlabel('Eigenvalue ratios')
     plt.ylabel('Dimension ratios')
-    plt.suptitle('Correlation Coefficient: ' + str(corr_coeff[0,1]))
+    plt.suptitle('Correlation Coefficient: ' + '{:.3f}'.format(corr_coeff[0,1]))
+    plt.title('Eigenvalue vs. Cleave relationship')
     plt.show()
+    plt.close()
 
 
-def radius_distribution(H, mode='evals', bins=10):
+def radius_distribution(H, mode='eval', bins=10):
     """Calculate the distribution of inner to outer radius ratios for halos.
     Ratios can be computed based on eigenvalues or absolute dimensions.
     :H a HalfMassRadius object containing halos in H.halos
-    :mode 'evals' for eigenvalue ratios, 'cleave' for absolute dimension ratios
+    :mode 'eval' for eigenvalue ratios, 'cleave' for absolute dimension ratios
     :bins number of uniformly distributed bins
     """
-    if mode=='evals':
+    if mode=='eval':
         ratios = [h.half_mass_radius/max(h.radii) for h in H.halos]
     elif mode=='cleave':
         ratios = [h.inner_R.x/h.cleave().x for h in H.halos]
@@ -64,3 +66,21 @@ def radius_distribution(H, mode='evals', bins=10):
     ax1.set_ylabel('Frequency')
     fig.show()
     fig.close()
+
+
+def particles_vs_radii(H, mode='eval'):
+    particles = [len(h.particles) for h in H.halos]
+    if mode=='eval':
+        ratios = [h.half_mass_radius/max(h.radii) for h in H.halos]
+    elif mode=='cleave':
+        ratios = [h.inner_R.x/h.cleave().x for h in H.halos]
+    else:
+        return -1
+    corr_coeff = np.corrcoef(ratios, particles)
+    plt.scatter(ratios, particles, alpha=0.3)
+    plt.xlabel('Radii (Inner to Outer)')
+    plt.ylabel('# of halo particles')
+    plt.suptitle('Correlation Coefficient: ' + '{:.3f}'.format(corr_coeff[0,1]))
+    plt.title('Halo Size vs. Radius ratios')    
+    plt.show()
+    plt.close()
