@@ -69,6 +69,10 @@ def radius_distribution(H, mode='eval', bins=10):
 
 
 def particles_vs_radii(H, mode='eval'):
+    """Plot the relationship between halo size and its inner:outer halo radius.
+    :H HalfMassRadius object with halo objects in H.halos
+    :mode either to use eigenvalues or absolute dimensions for calculating ratios.
+    """
     particles = [len(h.particles) for h in H.halos]
     if mode=='eval':
         ratios = [h.half_mass_radius/max(h.radii) for h in H.halos]
@@ -81,6 +85,6 @@ def particles_vs_radii(H, mode='eval'):
     plt.xlabel('Radii (Inner to Outer)')
     plt.ylabel('# of halo particles')
     plt.suptitle('Correlation Coefficient: ' + '{:.3f}'.format(corr_coeff[0,1]))
-    plt.title('Halo Size vs. Radius ratios')    
+    plt.title('Halo Size vs. Radius ratios')
     plt.show()
     plt.close()

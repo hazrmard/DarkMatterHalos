@@ -5,6 +5,9 @@ __author__ = 'Ibrahim'
 from halos import *
 from halos.helpers import *
 import time
+import multiprocessing as mp
+import os
+import random
 
 
 def bgc2_test(path='..\data\halos_0.1.bgc2'):
@@ -54,3 +57,26 @@ def ascii_test(path='..\data\ellipsoid.dat'):
 
 # Visualize halo:
 # halo.visualize(ellipsoids=True)
+
+def worker(i, dataq, lock):
+    interval = random.randint(1,5)
+    lock.acquire()
+    print 'Process ', os.getpid(), ' sleeping for ', interval, 's'
+    lock.release()
+    time.sleep(interval)
+    dataq.put([i, os.getpid(), interval])
+
+
+def master(n):
+    L = mp.Lock()
+    processes = []
+    dataq = mp.Queue()
+    for i in range(n):
+        p = mp.Process(target=worker, args=(i, dataq, L))
+        processes.append(p)
+        p.start()
+    print 'all processes started, getting data'
+    for i in range(n):
+        print dataq.get()
+    for p in processes:
+        p.join()
