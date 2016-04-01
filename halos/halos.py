@@ -31,18 +31,22 @@ class HalfMassRadius:
         self.h = []         # list of raw halos read from bgc2 files (otherwise empty)
         self.warnings = {}
 
-    def read_data(self):
+    def read_data(self, level=2):
         """
         bcg2.read_bcg2_numpy returns 3 numpy Record Arrays for header, halos, and particles.
         Header and halos are single dimensional Record Arrays containing data and halo information.
         Particle is a Record Array of Record Arrays for each halo id and for each particle axis.
         Schema for arrays can be found in halos/helpers/bcg2.py.
+        :level reads either header(0), halo metadata(1) or particle data (2). Should be 2.
         """
         for file in self.files:
-            self.header, halos, particles = bgc2.read_bgc2_numpy(file)
-            #self.h.append(halos)     # uncomment this to preserve all halo metadata read from bgc2
-            for i in xrange(len(halos)):
-                self.halos.append(Halo(halos[i].id, (halos[i].x, halos[i].y, halos[i].z), particles[i]))
+            self.header, self.h, particles = bgc2.read_bgc2_numpy(file, level=level)     
+            if level==2:
+                for i in xrange(len(halos)):
+                    self.halos.append(Halo(halos[i].id, (halos[i].x, halos[i].y, halos[i].z), particles[i]))
+            if level==1:
+                for i in xrange(len(halos)):
+                    self.halos.append(Halo(halos[i].id, (halos[i].x, halos[i].y, halos[i].z), ()))
         print "data file(s) read"
 
     def filter(self, minimum=None, maximum=None):

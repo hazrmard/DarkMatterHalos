@@ -58,7 +58,7 @@ def read_bgc2(filename):
 
 
 
-def read_bgc2_numpy(filename, level=2):
+def read_bgc2_numpy(filename, level=2, sieve=None):
 	import numpy as np
 
 	offset = 4
@@ -68,6 +68,10 @@ def read_bgc2_numpy(filename, level=2):
 	headersize = 1024
 	groupsize = 4*8 + 10*4
 	particlesize = 1*8 + 6*4
+
+	header = None
+	groups = None
+	particles = None
 
 	dt_header = np.dtype([('magic', np.uint64), \
 	                      ('version', np.int64), \
@@ -150,9 +154,17 @@ def read_bgc2_numpy(filename, level=2):
 			# Particle stuff
 			fd.seek(particleoffset, 1)
 			particles = []
-			for i in range(header.ngroups):
-				particles.append(np.rec.fromfile(fd, dtype=dt_particles, shape=groups[i].npart))
-				fd.seek(particleoffset, 1)
+			if sieve is None:
+				for i in range(header.ngroups):
+					particles.append(np.rec.fromfile(fd, dtype=dt_particles, shape=groups[i].npart))
+					fd.seek(particleoffset, 1)
+			else:
+				for i in range(header.ngroups):
+					record = np.rec.fromfile(fd, dtype=dt_particles, shape=groups[i].npart)
+					if record.id in sieve:
+						particles.append(record)
+					fd.seek(particleoffset, 1)
+
 
 	#print "Finished reading bgc2 file."
 	return header, groups, particles
