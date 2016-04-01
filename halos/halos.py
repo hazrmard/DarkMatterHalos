@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import bgc2
 import config
 from mpl_toolkits.mplot3d import Axes3D
+import glob
 
 
 #Settings
@@ -16,11 +17,18 @@ warnings.simplefilter('error', RuntimeWarning)      # raise exception on Runtime
 COORDS = config.COORDS
 
 class HalfMassRadius:
-    def __init__(self, file):
-        self.file = file
+    def __init__(self, files):
+        if type(files) is list:
+            self.files = files
+        else:
+            self.files = [files]
+        temp_files = []
+        for file in self.files:
+            temp_files.extend(glob.glob(file))
+        self.files = temp_files
         self.header = []
         self.halos = []     # list of halos
-        self.h = []
+        self.h = []         # list of raw halos read from bgc2 files (otherwise empty)
         self.warnings = {}
 
     def read_data(self):
@@ -30,11 +38,12 @@ class HalfMassRadius:
         Particle is a Record Array of Record Arrays for each halo id and for each particle axis.
         Schema for arrays can be found in halos/helpers/bcg2.py.
         """
-        self.header, halos, particles = bgc2.read_bgc2_numpy(self.file)
-        self.h = halos
-        for i in xrange(len(halos)):
-            self.halos.append(Halo(halos[i].id, (halos[i].x, halos[i].y, halos[i].z), particles[i]))
-        print "data file read"
+        for file in self.files:
+            self.header, halos, particles = bgc2.read_bgc2_numpy(file)
+            #self.h.append(halos)     # uncomment this to preserve all halo metadata read from bgc2
+            for i in xrange(len(halos)):
+                self.halos.append(Halo(halos[i].id, (halos[i].x, halos[i].y, halos[i].z), particles[i]))
+        print "data file(s) read"
 
     def filter(self, minimum=None, maximum=None):
         if minimum is not None:
@@ -90,6 +99,23 @@ class HalfMassRadius:
                 i+=1
         print "higher order fit completed, total warnings: " + str(i)
 
+    def __add__(self, other):
+        files = self.files + other.files
+        result = HalfMassRadius(files)
+        result.halos = self.halos + other.halos
+        result.h = self.h + other.h
+        result.warnings = {}
+        return result
+
+    def __radd__(self, other):
+        if other==0:
+            return self
+        else:
+            return self.__add__(other)
+
+    def __repr__(self):
+        return '< ' + str(len(self.halos)) + ' halo collection >'
+
 
 class Halo:
     coord_type = COORDS
@@ -109,6 +135,9 @@ class Halo:
         self.half_mass_radius = np.float32(0)                                  # ellipsoidal radius of hald mass sub-halo
         self.inner_R = np.array((0,0,0), dtype=Halo.coord_type)       # principal axis dimensions for inner halo
         self.fig = None
+
+    def __repr__(self):
+        return '< Halo: ' + self.id + '; Size: ' + str(len(self.particles)) + ' particles >'
 
     def center_halo(self):
         """

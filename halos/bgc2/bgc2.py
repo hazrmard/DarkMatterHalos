@@ -58,7 +58,7 @@ def read_bgc2(filename):
 
 
 
-def read_bgc2_numpy(filename):
+def read_bgc2_numpy(filename, level=2):
 	import numpy as np
 
 	offset = 4
@@ -129,29 +129,32 @@ def read_bgc2_numpy(filename):
 	                         ('vy', np.float32), \
 	                         ('vz', np.float32)])
 
-	print "Reading "+filename+"..."
+	#print "Reading "+filename+"..."
 	with open(filename, 'rb') as fd:
 		fd.seek(offset, 0)
 
-		# Header stuff
-		header = np.rec.fromfile(fd, dtype=dt_header, shape=1)
-		header = header[0]
-		print 'This is bgc2 file %d of %d.' % (header.file_id, header.num_files)
-		print 'Redshift = ', header.redshift
-		print 'Number of halos = ', header.ngroups
+		if level>=0:
+			# Header stuff
+			header = np.rec.fromfile(fd, dtype=dt_header, shape=1)
+			header = header[0]
+			#print 'This is bgc2 file %d of %d.' % (header.file_id, header.num_files)
+			#print 'Redshift = ', header.redshift
+			#print 'Number of halos = ', header.ngroups
 
-		# Group/halo stuff
-		fd.seek(offset + headersize + groupoffset, 0)
-		groups = np.rec.fromfile(fd, dtype=dt_groups, shape=header.ngroups)
+		if level>=1:
+			# Group/halo stuff
+			fd.seek(offset + headersize + groupoffset, 0)
+			groups = np.rec.fromfile(fd, dtype=dt_groups, shape=header.ngroups)
 
-		# Particle stuff
-		fd.seek(particleoffset, 1)
-		particles = []
-		for i in range(header.ngroups):
-			particles.append(np.rec.fromfile(fd, dtype=dt_particles, shape=groups[i].npart))
+		if level>=2:
+			# Particle stuff
 			fd.seek(particleoffset, 1)
+			particles = []
+			for i in range(header.ngroups):
+				particles.append(np.rec.fromfile(fd, dtype=dt_particles, shape=groups[i].npart))
+				fd.seek(particleoffset, 1)
 
-	print "Finished reading bgc2 file."
+	#print "Finished reading bgc2 file."
 	return header, groups, particles
 
 
