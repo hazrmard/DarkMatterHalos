@@ -18,6 +18,9 @@ COORDS = config.COORDS
 
 class HalfMassRadius:
     def __init__(self, files):
+        """
+        :files single or list of paths. Paths can contain wildcards.
+        """
         if type(files) is list:
             self.files = files
         else:
@@ -28,33 +31,40 @@ class HalfMassRadius:
         self.files = temp_files
         self.header = []
         self.halos = []     # list of halos
-        self.h = []         # list of raw halos read from bgc2 files (otherwise empty)
+        self.h = []         # halo metadata (position, id, size etc.)
         self.warnings = {}
 
-    def read_data(self, level=2):
+    def read_data(self, level=2, sieve=None):
         """
         bcg2.read_bcg2_numpy returns 3 numpy Record Arrays for header, halos, and particles.
         Header and halos are single dimensional Record Arrays containing data and halo information.
         Particle is a Record Array of Record Arrays for each halo id and for each particle axis.
         Schema for arrays can be found in halos/helpers/bcg2.py.
         :level reads either header(0), halo metadata(1) or particle data (2). Should be 2.
+        :sieve a set of ids to keep. All others discarded. If None, all data are kept.
         """
         for file in self.files:
-            self.header, self.h, particles = bgc2.read_bgc2_numpy(file, level=level)     
+            self.header, self.h, particles = bgc2.read_bgc2_numpy(file, level=level, sieve=sieve)
             if level==2:
-                for i in xrange(len(halos)):
-                    self.halos.append(Halo(halos[i].id, (halos[i].x, halos[i].y, halos[i].z), particles[i]))
+                print 'h', len(self.h)
+                print 'particles', len(particles)
+                for i in xrange(len(self.h)):
+                    if sieve is not None:
+                        print i
+                    self.halos.append(Halo(self.h[i].id, (self.h[i].x, self.h[i].y, self.h[i].z), particles[i]))
             if level==1:
-                for i in xrange(len(halos)):
-                    self.halos.append(Halo(halos[i].id, (halos[i].x, halos[i].y, halos[i].z), ()))
+                for i in xrange(len(self.h)):
+                    self.halos.append(Halo(self.h[i].id, (self.h[i].x, self.h[i].y, self.h[i].z), ()))
         print "data file(s) read"
 
     def filter(self, minimum=None, maximum=None):
         if minimum is not None:
             self.halos = [h for h in self.halos if len(h.particles) >= minimum]
+            self.h = [h for h in self.h if h.npart >= minimum]
             print "halos with less than " + str(minimum) + " particles filtered out"
         if maximum is not None:
             self.halos = [h for h in self.halos if len(h.particles) <= maximum]
+            self.h = [h for h in self.h if h.npart <= maximum]
             print "halos with more than " + str(maximum) + " particles filtered out"
 
     def center_halos(self):
@@ -141,7 +151,7 @@ class Halo:
         self.fig = None
 
     def __repr__(self):
-        return '< Halo: ' + self.id + '; Size: ' + str(len(self.particles)) + ' particles >'
+        return '< Halo: ' + str(self.id) + '; Size: ' + str(len(self.particles)) + ' particles >'
 
     def center_halo(self):
         """

@@ -59,6 +59,11 @@ def read_bgc2(filename):
 
 
 def read_bgc2_numpy(filename, level=2, sieve=None):
+	"""read halo data from bgc2 file.
+	:filename - path to file
+	:level - 0:only read header, 1:only read halo meta deta, 2: read particle data
+	:sieve - set of halo ids to keep. If None, all ids are kept.
+	"""
 	import numpy as np
 
 	offset = 4
@@ -72,6 +77,8 @@ def read_bgc2_numpy(filename, level=2, sieve=None):
 	header = None
 	groups = None
 	particles = None
+	if sieve is not None:
+		sieve = set(sieve)
 
 	dt_header = np.dtype([('magic', np.uint64), \
 	                      ('version', np.int64), \
@@ -147,24 +154,27 @@ def read_bgc2_numpy(filename, level=2, sieve=None):
 
 		if level>=1:
 			# Group/halo stuff
+			#fd.seek(offset + headersize + groupoffset, 0)
+			#groups = np.rec.fromfile(fd, dtype=dt_groups, shape=header.ngroups)
 			fd.seek(offset + headersize + groupoffset, 0)
 			groups = np.rec.fromfile(fd, dtype=dt_groups, shape=header.ngroups)
+			if sieve is not None:
+				temp_groups = groups[:]
+				groups = [x for x in groups if x.id in sieve]
+				print 'filtered group size', len(groups)
+
+
 
 		if level>=2:
 			# Particle stuff
 			fd.seek(particleoffset, 1)
 			particles = []
-			if sieve is None:
-				for i in range(header.ngroups):
-					particles.append(np.rec.fromfile(fd, dtype=dt_particles, shape=groups[i].npart))
-					fd.seek(particleoffset, 1)
-			else:
-				for i in range(header.ngroups):
-					record = np.rec.fromfile(fd, dtype=dt_particles, shape=groups[i].npart)
-					if record.id in sieve:
-						particles.append(record)
-					fd.seek(particleoffset, 1)
 
+			for i in range(header.ngroups):
+				particles.append(np.rec.fromfile(fd, dtype=dt_particles, shape=groups[i].npart))
+				fd.seek(particleoffset, 1)
+			if sieve is not None:
+				particles = [p for p in particles if p[0].id in sieve]
 
 	#print "Finished reading bgc2 file."
 	return header, groups, particles
