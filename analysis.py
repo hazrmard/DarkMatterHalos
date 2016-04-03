@@ -26,12 +26,13 @@ def eval_vs_cleave(H,order=1):
     plt.close()
 
 
-def radius_distribution(H, mode='eval', bins=10):
+def radius_distribution(H, mode='eval', bins=10, plot=True):
     """Calculate the distribution of inner to outer radius ratios for halos.
     Ratios can be computed based on eigenvalues or absolute dimensions.
     :H a HalfMassRadius object containing halos in H.halos
     :mode 'eval' for eigenvalue ratios, 'cleave' for absolute dimension ratios
-    :bins number of uniformly distributed bins
+    :bins number of uniformly distributed bins, or array of bin edges
+    :plot whether to plot data or just return values
     """
     if mode=='eval':
         ratios = [h.half_mass_radius/max(h.radii) for h in H.halos]
@@ -56,9 +57,10 @@ def radius_distribution(H, mode='eval', bins=10):
             rmean[i] = rsum[i] / counts[i]
             rstd_dev[i] = np.sqrt(rssum[i]/counts[i] - rmean[i]**2 )
     bins_mean = [0.5*(bin_edges[i]+bin_edges[i+1]) for i in range(len(bin_edges)-1)]
+    if not plot:
+        return rmean, counts, rstd_dev 
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
-    #ax1.scatter(rmean, counts)
     arg_max = np.argmax(counts)
     ax1.set_title('Half Mass Radii - Max:(' + str(counts[arg_max]) + ',' + '{:.3f}'.format(rmean[arg_max]) + '); Total:' + str(len(H.halos)))
     ax1.errorbar(rmean, counts, xerr=rstd_dev, fmt='o')

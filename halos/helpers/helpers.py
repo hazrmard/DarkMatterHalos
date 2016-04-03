@@ -35,15 +35,15 @@ def do_all(halo):
     take a halo instance and take it through all functions necessary for calculating half mass radius.
     Returns halo instance with finished calculations.
     """
-    s_time = time.clock()
-    print 'beginning processing of halo:', halo.id
+    #s_time = time.clock()
+    #print 'beginning processing of halo:', halo.id
     halo.center_halo()
     halo.get_covariance_matrix()
     halo.get_eigenvectors()
     halo.convert_basis()
     halo.get_radii()
     halo.get_half_mass_radius()
-    print 'finished, execution time: ', time.clock()-s_time
+    #print 'finished, execution time: ', time.clock()-s_time
     return halo
 
 def std_dev(arr):

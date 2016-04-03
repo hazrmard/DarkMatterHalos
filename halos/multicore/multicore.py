@@ -23,7 +23,7 @@ class Multicore:
         """Loads halo metadata from files directly.
         :files single or list of paths. Paths can have wildcards.
         """
-        H = HalfMassRadius(files)
+        H = HalfMassRadius(files, verbose=False)
         H.read_data(level=1)
         self.h = H.h
         self.files = files
@@ -89,7 +89,7 @@ class Multicore:
         :files file paths to all source data
         :queue a multiprocessing.Queue() instance. For inter-process communication
         """
-        H = HalfMassRadius(files)
+        H = HalfMassRadius(files, verbose=False)
         H.read_data(level=2, sieve=pool_ids)
         results = []
         for halo in H.halos:

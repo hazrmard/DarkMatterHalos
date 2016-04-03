@@ -17,7 +17,7 @@ warnings.simplefilter('error', RuntimeWarning)      # raise exception on Runtime
 COORDS = config.COORDS
 
 class HalfMassRadius:
-    def __init__(self, files):
+    def __init__(self, files, verbose=True):
         """
         :files single or list of paths. Paths can contain wildcards.
         """
@@ -33,6 +33,7 @@ class HalfMassRadius:
         self.halos = []     # list of halos
         self.h = []         # halo metadata (position, id, size etc.)
         self.warnings = {}
+        self.verbose = verbose
 
     def read_data(self, level=2, sieve=None):
         """
@@ -44,44 +45,53 @@ class HalfMassRadius:
         :sieve a set of ids to keep. All others discarded. If None, all data are kept.
         """
         for file in self.files:
-            self.header, self.h, particles = bgc2.read_bgc2_numpy(file, level=level, sieve=sieve)
+            header, h, particles = bgc2.read_bgc2_numpy(file, level=level, sieve=sieve)
+            self.header.append(header)
+            self.h.extend(h)
             if level==2:
-                for i in xrange(len(self.h)):
-                    self.halos.append(Halo(self.h[i].id, (self.h[i].x, self.h[i].y, self.h[i].z), particles[i]))
+                for i in xrange(len(h)):
+                    self.halos.append(Halo(h[i].id, (h[i].x, h[i].y, h[i].z), particles[i]))
             if level==1:
-                for i in xrange(len(self.h)):
-                    self.halos.append(Halo(self.h[i].id, (self.h[i].x, self.h[i].y, self.h[i].z), ()))
-        print "data file(s) read"
+                for i in xrange(len(h)):
+                    self.halos.append(Halo(h[i].id, (h[i].x, h[i].y, h[i].z), ()))
+        if self.verbose:
+            print "data file(s) read"
 
     def filter(self, minimum=None, maximum=None):
         if minimum is not None:
-            self.halos = [h for h in self.halos if len(h.particles) >= minimum]
+            self.halos = [self.halos[i] for i in range(len(self.h)) if self.h[i].npart >= minimum]
             self.h = [h for h in self.h if h.npart >= minimum]
-            print "halos with less than " + str(minimum) + " particles filtered out"
+            if self.verbose:
+                print "halos with less than " + str(minimum) + " particles filtered out"
         if maximum is not None:
-            self.halos = [h for h in self.halos if len(h.particles) <= maximum]
+            self.halos = [self.halos[i] for i in range(len(self.h)) if self.h[i].npart <= maximum]
             self.h = [h for h in self.h if h.npart <= maximum]
-            print "halos with more than " + str(maximum) + " particles filtered out"
+            if self.verbose:
+                print "halos with more than " + str(maximum) + " particles filtered out"
 
     def center_halos(self):
         for halo in self.halos:
             halo.center_halo()
-        print "halos centered"
+        if self.verbose:
+            print "halos centered"
 
     def get_covariance_matrices(self):
         for halo in self.halos:
             halo.get_covariance_matrix()
-        print "covariance matrices obtained"
+        if self.verbose:
+            print "covariance matrices obtained"
 
     def get_eigenvectors(self):
         for halo in self.halos:
             halo.get_eigenvectors()
-        print "eigenvectors computed"
+        if self.verbose:
+            print "eigenvectors computed"
 
     def convert_bases(self):
         for halo in self.halos:
             halo.convert_basis()
-        print "bases converted"
+        if self.verbose:
+            print "bases converted"
 
     def get_radii(self):
         for halo in self.halos:
@@ -91,13 +101,15 @@ class HalfMassRadius:
                 halo.radii = -1                         # handle singular covariance matrices
             except RuntimeWarning as a:
                 self.warnings[halo.id] = a.message
-        print "total warnings: " + str(len(self.warnings))
-        print "radii computed"
+        if self.verbose:
+            print "total warnings: " + str(len(self.warnings))
+            print "radii computed"
 
     def get_half_mass_radii(self):
         for halo in self.halos:
             _ = halo.get_half_mass_radius()
-        print "half mass radii computed"
+        if self.verbose:
+            print "half mass radii computed"
 
     def higher_order_fit(self, order=2):
         i=0
@@ -105,9 +117,11 @@ class HalfMassRadius:
             try:
                 halo.higher_order_fit(order=order)
             except:
-                print "Complex warning with halo id:" + str(halo.id)
+                if self.verbose:
+                    print "Complex warning with halo id:" + str(halo.id)
                 i+=1
-        print "higher order fit completed, total warnings: " + str(i)
+                if self.verbose:
+                    print "higher order fit completed, total warnings: " + str(i)
 
     def __add__(self, other):
         files = self.files + other.files

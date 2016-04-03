@@ -159,8 +159,8 @@ def read_bgc2_numpy(filename, level=2, sieve=None):
 			fd.seek(offset + headersize + groupoffset, 0)
 			groups = np.rec.fromfile(fd, dtype=dt_groups, shape=header.ngroups)
 			if sieve is not None:
-				temp_groups = [x if x.id in sieve else None for x in groups]
-				groups = [x for x in temp_groups if x is not None]
+				temp_groups = [x if x.id in sieve else int(x.npart) for x in groups]
+				groups = [x for x in temp_groups if not isinstance(x, (int, long))]
 				#print 'filtered group size', len(groups)
 
 
@@ -175,10 +175,12 @@ def read_bgc2_numpy(filename, level=2, sieve=None):
 					fd.seek(particleoffset, 1)
 			else:
 				for i in range(header.ngroups):
-					if not temp_groups[i] is None:
+					if not isinstance(temp_groups[i], (int,long)):
 						record = np.rec.fromfile(fd, dtype=dt_particles, shape=temp_groups[i].npart)
 						particles.append(record)
-					fd.seek(particleoffset, 1)
+						fd.seek(particleoffset, 1)
+					else:
+						fd.seek(particleoffset + temp_groups[i]*particlesize, 1)
 
 	#print "Finished reading bgc2 file."
 	return header, groups, particles
