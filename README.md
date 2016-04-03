@@ -12,7 +12,7 @@ An example of a Halo:
   
 ## Instructions
 ### Installation
-This package requires `numpy` and python 2.7.x. Clone this repository. In console browse to the repository and run:  
+This package requires `numpy`, `matplotlib`, and python 2.7.x. Clone this repository. In console browse to the repository and run:  
 ```bash
 $ python setup.py install
 ```
