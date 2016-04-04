@@ -19,7 +19,8 @@ class MyMulticore(multicore.Multicore):
 
 def main(n):
     b = time.clock()
-    H = HalfMassRadius('../data/*.bgc2', verbose=False)
+    #H = HalfMassRadius('../data/*.bgc2', verbose=False)
+    H = HalfMassRadius('/scratch/sissomdj/projects/simulations/rockstar/box1/2lpt/snap059/halos/*.bgc2', verbose=False)
     H.read_data(level=1)
     H.filter(100)
     m = MyMulticore(n)
