@@ -13,28 +13,40 @@ class MyMulticore(multicore.Multicore):
         bin_edges = np.linspace(0.0, 1.0, 26)
         ratios = [h.half_mass_radius/max(h.radii) for h in H.halos]
         counts, _ = np.histogram(ratios, bin_edges)
-
-        return counts
+        delta_t = time.clock() - self.delta
+        return (counts, delta_t)
 
 
 def main(n):
+    b = time.clock()
     H = HalfMassRadius('../data/*.bgc2', verbose=False)
     H.read_data(level=1)
     H.filter(100)
     m = MyMulticore(n)
+    m.score_metric = multicore.quadratic
     m.get_data_from_class(H)
     m.balance_load()
-    b = time.clock()
     m.begin()
     res = m.get_results()
-    print 'Time passed =', time.clock() - b
+
+    print 'Process start = ', time.strftime('%Y-%m-%d %H:%M:%S')
+    print 'Time passed =', '{0:.3f}'.format(time.clock()-b)
+    print 'Subprocess #\tHalos\t\tTime /s'
+    i=1
+    for counts, t in res:
+        print str(i) + '\t\t' + str(sum(counts)) + '\t\t' + '{0:.3f}'.format(t)
+        i+=1
+    print
+    print 'Source files:'
+    for f in m.files:
+        print f
+    print
 
     bin_counts = np.array([0] * 25)
     bin_edges = np.linspace(0.0, 1.0, 26)
     bins_mean = [0.5*(bin_edges[i]+bin_edges[i+1]) for i in range(len(bin_edges)-1)]
-    for r in res:
+    for r, _ in res:
         bin_counts += r
-    #print 'BIN COUNTS', bin_counts
 
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
@@ -43,4 +55,12 @@ def main(n):
     _ = ax1.hist(bins_mean, bin_edges, weights=bin_counts)
     ax1.set_xlabel('Inner to Outer halo radius')
     ax1.set_ylabel('Frequency')
-    fig.show()
+    fig.savefig('result.png')
+
+
+if __name__=='__main__':
+    #num_processes = MyMulticore().get_cores()
+    num_processes=16
+    print 'Number of processes:', 16
+    main(num_processes)
+    print 'Finished'

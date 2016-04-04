@@ -3,16 +3,18 @@ import multiprocessing as mp
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import time
 
 class Multicore:
     def __init__(self, processes=1):
-        self.processes = processes
-        self.pools = []
-        self.h = []
-        self.score_metric = default_score
-        self.files = None
-        self.queue = mp.Queue()
-        self.process_list = []
+        self.processes = processes      # number of processes to spawn
+        self.pools = []                 # list of lists of halos/process
+        self.h = []                     # list of halos prior to balancing
+        self.score_metric = cubic       # determines score of each halo
+        self.files = None                   # source files
+        self.queue = mp.Queue()             # inter process communication
+        self.process_list = []              # list of spawned processes
+        self.delta = 0                      # time stamp of worker start
 
     def get_cores(self):
         """Returns number of cores (including virtual) on the machine.
@@ -26,7 +28,7 @@ class Multicore:
         H = HalfMassRadius(files, verbose=False)
         H.read_data(level=1)
         self.h = H.h
-        self.files = files
+        self.files = H.files
 
     def get_data_from_class(self, c):
         """Extract halo metadeta from a HalfMassRadius object.
@@ -55,8 +57,9 @@ class Multicore:
         #print 'halos/pool', [len(pool, score_metric) for pool in self.pools]
         #print 'score/pool', [self.score(pool, score_metric) for pool in self.pools]
 
-    def visualize(self):
+    def visualize(self, fpath=None):
         """Show a bar graph containing halos/process and load/process
+        :fpath output path of saved figure
         """
         d1 = [len(pool) for pool in self.pools]
         d2 = [self.score(pool, self.score_metric) for pool in self.pools]
@@ -77,8 +80,10 @@ class Multicore:
         ax2.set_ylabel('Pool Load', color='r')
         for tl in ax2.get_yticklabels():
             tl.set_color('r')
-
-        fig.show()
+        if fpath is None:
+            fig.show()
+        else:
+            fig.savefig(fpath)
 
     def worker(self, pool_ids, files, queue):
         """The target function of each process. Runs parallel_process() over
@@ -89,6 +94,7 @@ class Multicore:
         :files file paths to all source data
         :queue a multiprocessing.Queue() instance. For inter-process communication
         """
+        self.delta = time.clock()
         H = HalfMassRadius(files, verbose=False)
         H.read_data(level=2, sieve=pool_ids)
         results = []
@@ -166,5 +172,13 @@ class Multicore:
         self.h = list(np.array(self.h)[sorted_indices])
 
 
-def default_score(x):
+def cubic(x):
     return x.npart**3
+
+
+def quadratic(x):
+    return x.npart**2
+
+
+def linear(x):
+    return x.npart
