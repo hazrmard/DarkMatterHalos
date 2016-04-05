@@ -5,3 +5,4 @@ halos/.idea/
 dist/
 build/
 halos.egg-info/
+*.dat

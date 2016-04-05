@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import time
+plt.ioff()
 
 class Multicore:
     def __init__(self, processes=1):
@@ -140,6 +141,7 @@ class Multicore:
         for _ in range(self.processes):
             results.append(self.queue.get())
         for p in self.process_list:
+            p.terminate()
             p.join()
         return results
 

@@ -8,7 +8,7 @@ import bgc2
 import config
 from mpl_toolkits.mplot3d import Axes3D
 import glob
-
+plt.ioff()
 
 #Settings
 #plt.hold(True)
