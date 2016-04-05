@@ -20,7 +20,7 @@ class MyMulticore(multicore.Multicore):
 def main(n):
     b = time.clock()
     #H = HalfMassRadius('../data/*.bgc2', verbose=False)
-    H = HalfMassRadius('/scratch/sissomdj/projects/simulations/rockstar/box1/2lpt/snap059/halos/*.bgc2', verbose=False)
+    H = HalfMassRadius('../data/*.bgc2', verbose=False)
     H.read_data(level=1)
     H.filter(100)
     m = MyMulticore(n)
@@ -60,8 +60,8 @@ def main(n):
 
 
 if __name__=='__main__':
-    #num_processes = MyMulticore().get_cores()
-    num_processes=16
-    print 'Number of processes:', 16
+    num_processes = MyMulticore().get_cores()
+    #num_processes=16
+    print 'Number of processes:', num_processes
     main(num_processes)
     print 'Finished'

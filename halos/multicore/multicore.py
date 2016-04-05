@@ -140,6 +140,7 @@ class Multicore:
         for _ in range(self.processes):
             results.append(self.queue.get())
         for p in self.process_list:
+            p.terminate()
             p.join()
         return results
 
