@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --nodes=2
-#SBATCH --ntasks=16
+#SBATCH --ntasks=24
 #SBATCH --mem-per-cpu=2G
 #SBATCH --time=0-00:02:00
 #SBATCH --output=log.dat
@@ -13,4 +13,4 @@
 # writing out the version of Python
 setpkgs -a python2.7.8
 python --version
-python multicore_example.py
+python multicore_example.py 24

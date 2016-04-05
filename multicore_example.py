@@ -2,6 +2,7 @@ from halos import *
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import sys
 
 plt.ioff()
 
@@ -63,7 +64,7 @@ def main(n):
 
 if __name__=='__main__':
     #num_processes = MyMulticore().get_cores()
-    num_processes=16
-    print 'Number of processes:', 16
+    num_processes=int(sys.argv[1])
+    print 'Number of processes:', num_processes
     main(num_processes)
     print 'Finished'
