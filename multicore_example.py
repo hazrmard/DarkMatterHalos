@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+plt.ioff()
+
 class MyMulticore(multicore.Multicore):
 
     def parallel_process(self, halo):

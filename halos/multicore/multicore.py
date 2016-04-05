@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import time
+plt.ioff()
 
 class Multicore:
     def __init__(self, processes=1):
