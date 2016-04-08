@@ -14,7 +14,8 @@ class MyMulticore(multicore.Multicore):
 
     def post_processing(self, H, results):
         bin_edges = np.linspace(0.0, 1.0, 26)
-        ratios = [h.half_mass_radius/max(h.radii) for h in H.halos]
+        #ratios = [h.half_mass_radius/max(h.radii) for h in H.halos]
+        ratios = [h.inner_R.x/h.cleave().x for h in H.halos]
         counts, _ = np.histogram(ratios, bin_edges)
         delta_t = time.clock() - self.delta
         return (counts, delta_t)
@@ -22,7 +23,6 @@ class MyMulticore(multicore.Multicore):
 
 def main(n):
     b = time.clock()
-    #H = HalfMassRadius('../data/*.bgc2', verbose=False)
     H = HalfMassRadius('../data/*.bgc2', verbose=False)
     H.read_data(level=1)
     H.filter(100)

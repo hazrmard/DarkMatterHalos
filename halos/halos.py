@@ -140,6 +140,9 @@ class HalfMassRadius:
     def __repr__(self):
         return '< ' + str(len(self.halos)) + ' halo collection >'
 
+    def __eq__(self, other):
+        return set([h.id for h in self.h]) == set([h.id for h in other.h])
+
 
 class Halo:
     coord_type = COORDS
