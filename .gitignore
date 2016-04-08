@@ -7,3 +7,4 @@ build/
 halos.egg-info/
 *.dat
 *.png
+results/

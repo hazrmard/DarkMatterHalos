@@ -9,7 +9,8 @@ plt.ioff()
 class Multicore:
     def __init__(self, processes=1):
         self.processes = processes      # number of processes to spawn
-        self.pools = []                 # list of lists of halos/process
+        self.pools = [[]] * processes   # list of lists of halos/process
+        self.args = [None] * processes  # list of custom process arguments
         self.h = []                     # list of halos prior to balancing
         self.score_metric = cubic       # determines score of each halo
         self.files = None                   # source files
@@ -44,14 +45,13 @@ class Multicore:
         Default score metric is O(n^3) where n is # of particles in halo.
         """
         score_metric = self.score_metric if score_metric is None else score_metric
-        self._setup_pools()
         self._sort_halos(score_metric)
         pool_scores = [self.score(pool, score_metric) for pool in self.pools]
         min_pool = self.pools[0]
         min_pool_index = 0
         while self.h:
             halo = self.h.pop()
-            min_pool.append(halo)
+            min_pool.append(halo.id)
             pool_scores[min_pool_index] += self.score(halo, score_metric)
             min_pool_index = np.argmin(pool_scores)
             min_pool = self.pools[min_pool_index]
@@ -86,7 +86,7 @@ class Multicore:
         else:
             fig.savefig(fpath)
 
-    def worker(self, pool_ids, files, queue):
+    def worker(self, pool_ids, files, queue, args):
         """The target function of each process. Runs parallel_process() over
         each halo in thread and passes the results to post_processing() for
         aggregation etc. Final result as determined by post_processing() is given
@@ -100,11 +100,11 @@ class Multicore:
         H.read_data(level=2, sieve=pool_ids)
         results = []
         for halo in H.halos:
-            results.append(self.parallel_process(halo))
-        final_result = self.post_processing(H, results)
+            results.append(self.parallel_process(halo, args))
+        final_result = self.post_processing(H, results, args)
         queue.put(final_result)
 
-    def parallel_process(self, halo):
+    def parallel_process(self, halo, args):
         """the function applied to a single Halo instance. This function is called
         in a loop for all halos in a thread. The return value is appended to a list of
         results of parallel_process() on all halos in a thread.
@@ -112,7 +112,7 @@ class Multicore:
         """
         return None
 
-    def post_processing(self, H, results):
+    def post_processing(self, H, results, args):
         """The HalfMassRadius object of a particular thread and the list of results
         of parallel_process() on all halos in a thread are passed to this function.
         can be used for aggregating values or making final edits to results before being
@@ -126,10 +126,9 @@ class Multicore:
         containing halos as determined by the balance_load() function.
         """
         for i in range(self.processes):
-            pool_ids = set([halo.id for halo in self.pools[i]])
             if len(pool_ids)==0:
                 pool_ids = None
-            p = mp.Process(target=self.__class__(1).worker, args=(pool_ids, self.files, self.queue))
+            p = mp.Process(target=self.__class__(1).worker, args=(pool_ids, self.files, self.queue, self.args[i]))
             self.process_list.append(p)
             p.start()
 
@@ -158,14 +157,6 @@ class Multicore:
         else:
             score = score_metric(h)
         return score
-
-    def _setup_pools(self):
-        """creates a list of lists. Each sublist contains metadata of halos going
-        in each process.
-        """
-        self.pools = []
-        for _ in range(self.processes):
-            self.pools.append([])
 
     def _sort_halos(self, score_metric):
         """sorts halo objects with metadata in ascending order of cost.

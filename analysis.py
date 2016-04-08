@@ -35,12 +35,12 @@ def radius_distribution(H, mode='eval', bins=10, plot=True):
     :plot whether to plot data or just return values
     """
     if mode=='eval':
-        ratios = [h.half_mass_radius/max(h.radii) for h in H.halos]
+        ratios = [max(h.radii)/h.half_mass_radius for h in H.halos]
     elif mode=='cleave':
-        ratios = [h.inner_R.x/h.cleave().x for h in H.halos]
+        ratios = [h.cleave().x/h.inner_R.x for h in H.halos]
     else:
         return -1
-    counts, bin_edges = np.histogram(ratios, bins)
+    counts, bin_edges = np.histogram(ratios, bins, normed=True)
     rinds = np.digitize(ratios, bin_edges)
     rinds = [r-1 for r in rinds] #identify bins by lower bound
     rsum = [0]*(len(counts))
@@ -58,7 +58,7 @@ def radius_distribution(H, mode='eval', bins=10, plot=True):
             rstd_dev[i] = np.sqrt(rssum[i]/counts[i] - rmean[i]**2 )
     bins_mean = [0.5*(bin_edges[i]+bin_edges[i+1]) for i in range(len(bin_edges)-1)]
     if not plot:
-        return rmean, counts, rstd_dev 
+        return rmean, counts, rstd_dev
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     arg_max = np.argmax(counts)
