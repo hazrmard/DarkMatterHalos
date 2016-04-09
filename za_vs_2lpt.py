@@ -86,7 +86,7 @@ def main(n, box):
     status = M.get_results()
     for s, msg in status:
         if s==-1:
-            print e
+            print msg
             print '\n\n'
     print 'done'
 
