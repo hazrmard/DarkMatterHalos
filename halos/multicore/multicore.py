@@ -126,8 +126,10 @@ class Multicore:
         containing halos as determined by the balance_load() function.
         """
         for i in range(self.processes):
-            if len(pool_ids)==0:
+            if len(self.pools[i])==0:
                 pool_ids = None
+            else:
+                pool_ids = set(self.pools[i])
             p = mp.Process(target=self.__class__(1).worker, args=(pool_ids, self.files, self.queue, self.args[i]))
             self.process_list.append(p)
             p.start()
