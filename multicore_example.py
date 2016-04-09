@@ -8,11 +8,11 @@ plt.ioff()
 
 class MyMulticore(multicore.Multicore):
 
-    def parallel_process(self, halo):
+    def parallel_process(self, halo, args=None):
         helpers.do_all(halo)
         return None
 
-    def post_processing(self, H, results):
+    def post_processing(self, H, results, args=None):
         bin_edges = np.linspace(0.0, 1.0, 26)
         ratios = [h.half_mass_radius/max(h.radii) for h in H.halos]
         #ratios = [h.inner_R.x/h.cleave().x for h in H.halos]
@@ -23,8 +23,8 @@ class MyMulticore(multicore.Multicore):
 
 def main(n):
     b = time.clock()
-    #H = HalfMassRadius('../data/*.bgc2', verbose=False)
-    H = HalfMassRadius('/scratch/sissomdj/projects/simulations/rockstar/box1/za/snap059/halos/*.bgc2', verbose=False)
+    H = HalfMassRadius('../data/Halos_0.1.bgc2', verbose=False)
+    #H = HalfMassRadius('/scratch/sissomdj/projects/simulations/rockstar/box1/za/snap059/halos/*.bgc2', verbose=False)
     H.read_data(level=1)
     H.filter(100)
     m = MyMulticore(n)

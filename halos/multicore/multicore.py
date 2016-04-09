@@ -9,7 +9,7 @@ plt.ioff()
 class Multicore:
     def __init__(self, processes=1):
         self.processes = processes      # number of processes to spawn
-        self.pools = [[]] * processes   # list of lists of halos/process
+        self.pools = [[] for i in range(processes)]   # list of lists of halos/process
         self.args = [None] * processes  # list of custom process arguments
         self.h = []                     # list of halos prior to balancing
         self.score_metric = cubic       # determines score of each halo
@@ -47,6 +47,7 @@ class Multicore:
         score_metric = self.score_metric if score_metric is None else score_metric
         self._sort_halos(score_metric)
         pool_scores = [self.score(pool, score_metric) for pool in self.pools]
+        print pool_scores
         min_pool = self.pools[0]
         min_pool_index = 0
         while self.h:
@@ -104,7 +105,7 @@ class Multicore:
         final_result = self.post_processing(H, results, args)
         queue.put(final_result)
 
-    def parallel_process(self, halo, args):
+    def parallel_process(self, halo, args=None):
         """the function applied to a single Halo instance. This function is called
         in a loop for all halos in a thread. The return value is appended to a list of
         results of parallel_process() on all halos in a thread.
@@ -112,7 +113,7 @@ class Multicore:
         """
         return None
 
-    def post_processing(self, H, results, args):
+    def post_processing(self, H, results, args=None):
         """The HalfMassRadius object of a particular thread and the list of results
         of parallel_process() on all halos in a thread are passed to this function.
         can be used for aggregating values or making final edits to results before being
