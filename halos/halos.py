@@ -35,7 +35,7 @@ class Halos:
         self.warnings = {}
         self.verbose = verbose
 
-    def read_data(self, level=2, sieve=None):
+    def read_data(self, level=2, sieve=None, strict=False):
         """
         bcg2.read_bcg2_numpy returns 3 numpy Record Arrays for header, halos, and particles.
         Header and halos are single dimensional Record Arrays containing data and halo information.
@@ -43,6 +43,7 @@ class Halos:
         Schema for arrays can be found in halos/helpers/bcg2.py.
         :level reads either header(0), halo metadata(1) or particle data (2). Should be 2.
         :sieve a set of ids to keep. All others discarded. If None, all data are kept.
+        :strict=False creates empty halo instances just with metadata, True does not create instances
         """
         for file in self.files:
             header, h, particles = bgc2.read_bgc2_numpy(file, level=level, sieve=sieve)
@@ -52,7 +53,7 @@ class Halos:
             if level==2:
                 for i in xrange(len(h)):
                     self.halos.append(Halo(h[i].id, (h[i].x, h[i].y, h[i].z), particles[i]))
-            if level==1:
+            if level==1 and strict==False:
                 for i in xrange(len(h)):
                     self.halos.append(Halo(h[i].id, (h[i].x, h[i].y, h[i].z), ()))
         if self.verbose:
