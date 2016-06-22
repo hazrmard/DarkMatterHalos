@@ -1,4 +1,4 @@
-from halos import HalfMassRadius
+from halos import Halos
 from halos.multicore import Multicore
 import analysis
 import os
@@ -19,8 +19,8 @@ class MyMulticore(Multicore):
                         + '/za/snap' + args[1] + '/halos/*1.bgc2'
             #path_2lpt = '../data/halos_0.1.bgc2'
             #path_2lpt = '../data/halos_0.2.bgc2'
-            H2 = HalfMassRadius(path_2lpt, verbose=False)
-            HZ = HalfMassRadius(path_za, verbose=False)
+            H2 = Halos(path_2lpt, verbose=False)
+            HZ = Halos(path_za, verbose=False)
 
             bins = np.linspace(1, 5, 26)    # 25 bins
             bins_mean = [0.5*(bins[i]+bins[i+1]) for i in range(len(bins)-1)]

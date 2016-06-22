@@ -15,9 +15,9 @@ def bgc2_test(path='..\data\halos_0.1.bgc2'):
     """
     reading data from a sample bgc2 file containing multiple halos
     :param path: path to file
-    :return: a HalfMassRadius instance containing list of halos (<return_variable>.halos)
+    :return: a Halos instance containing list of halos (<return_variable>.halos)
     """
-    t = HalfMassRadius(path)
+    t = Halos(path)
     t.read_data()
     t.filter(100)         # filter out halos w/ less than 4 particles
     t.center_halos()

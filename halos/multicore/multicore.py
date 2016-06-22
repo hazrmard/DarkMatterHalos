@@ -27,14 +27,14 @@ class Multicore:
         """Loads halo metadata from files directly.
         :files single or list of paths. Paths can have wildcards.
         """
-        H = HalfMassRadius(files, verbose=False)
+        H = Halos(files, verbose=False)
         H.read_data(level=1)
         self.h = H.h
         self.files = H.files
 
     def get_data_from_class(self, c):
-        """Extract halo metadeta from a HalfMassRadius object.
-        :c a HalfMassRadius instance
+        """Extract halo metadeta from a Halos object.
+        :c a Halos instance
         """
         self.h = c.h
         self.files = c.files
@@ -97,7 +97,7 @@ class Multicore:
         :queue a multiprocessing.Queue() instance. For inter-process communication
         """
         self.delta = time.clock()
-        H = HalfMassRadius(files, verbose=False)
+        H = Halos(files, verbose=False)
         H.read_data(level=2, sieve=pool_ids)
         results = []
         for halo in H.halos:
@@ -114,7 +114,7 @@ class Multicore:
         return None
 
     def post_processing(self, H, results, args=None):
-        """The HalfMassRadius object of a particular thread and the list of results
+        """The Halos object of a particular thread and the list of results
         of parallel_process() on all halos in a thread are passed to this function.
         can be used for aggregating values or making final edits to results before being
         passed on to the main process. The return value is appended to a list of results
@@ -123,7 +123,7 @@ class Multicore:
         return None
 
     def begin(self):
-        """spawns processes. Each processes instantiates a HalfMassRadius object
+        """spawns processes. Each processes instantiates a Halos object
         containing halos as determined by the balance_load() function.
         """
         for i in range(self.processes):

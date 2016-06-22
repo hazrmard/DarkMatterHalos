@@ -16,7 +16,7 @@ warnings.simplefilter('error', RuntimeWarning)      # raise exception on Runtime
 
 COORDS = config.COORDS
 
-class HalfMassRadius:
+class Halos:
     def __init__(self, files, verbose=True):
         """
         :files single or list of paths. Paths can contain wildcards.
@@ -126,7 +126,7 @@ class HalfMassRadius:
 
     def __add__(self, other):
         files = self.files + other.files
-        result = HalfMassRadius(files)
+        result = Halos(files)
         result.halos = self.halos + other.halos
         result.h = self.h + other.h
         result.warnings = {}

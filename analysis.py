@@ -10,7 +10,7 @@ def eval_vs_cleave(H,order=1):
     i.e. transform=True.
     eigenvalue ratio = ratio of median and max evals along principal axis
     dimension ratio = ratio of x dimension of inner halo to all halo particles
-    :H a HalfMassRadius instance
+    :H a Halos instance
     :order order of fitting
     """
     H.higher_order_fit(order=order)
@@ -29,7 +29,7 @@ def eval_vs_cleave(H,order=1):
 def radius_distribution(H, mode='eval', bins=10, plot=True):
     """Calculate the distribution of inner to outer radius ratios for halos.
     Ratios can be computed based on eigenvalues or absolute dimensions.
-    :H a HalfMassRadius object containing halos in H.halos
+    :H a Halos object containing halos in H.halos
     :mode 'eval' for eigenvalue ratios, 'cleave' for absolute dimension ratios
     :bins number of uniformly distributed bins, or array of bin edges
     :plot whether to plot data or just return values
@@ -72,7 +72,7 @@ def radius_distribution(H, mode='eval', bins=10, plot=True):
 
 def particles_vs_radii(H, mode='eval'):
     """Plot the relationship between halo size and its inner:outer halo radius.
-    :H HalfMassRadius object with halo objects in H.halos
+    :H Halos object with halo objects in H.halos
     :mode either to use eigenvalues or absolute dimensions for calculating ratios.
     """
     particles = [len(h.particles) for h in H.halos]
