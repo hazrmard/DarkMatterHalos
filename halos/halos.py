@@ -47,7 +47,8 @@ class HalfMassRadius:
         for file in self.files:
             header, h, particles = bgc2.read_bgc2_numpy(file, level=level, sieve=sieve)
             self.header.append(header)
-            self.h.extend(h)
+            if h is not None:
+                self.h.extend(h)
             if level==2:
                 for i in xrange(len(h)):
                     self.halos.append(Halo(h[i].id, (h[i].x, h[i].y, h[i].z), particles[i]))
