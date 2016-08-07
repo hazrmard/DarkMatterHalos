@@ -21,7 +21,7 @@ Or you can just import `halos` if you are in the same directory.
 There are several examples present in `testing.py`. One primary interface is the `Halos` class. It performs calculations on BGC2 files that contain data for multiple halos.
 ```python
 import halos
-H = Halos(PATH_TO_BGC2_FILE)     # Single string or list of paths. Wildcards allowed.
+H = halos.Halos(PATH_TO_BGC2_FILE)     # Single string or list of paths. Wildcards allowed.
 H.read_data()                             # Instantiates a Halo object for each halo in file
 H.filter(minimum=10)                      # Leave out halos with < 10 particles
 H.center_halos()                          # (1) Translate all halos around center points
