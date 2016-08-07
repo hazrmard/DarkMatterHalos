@@ -164,17 +164,31 @@ class Halo(object):
         self.half_mass_radius = np.float32(0)                                  # ellipsoidal radius of hald mass sub-halo
         self.inner_R = np.array((0,0,0), dtype=Halo.coord_type)       # principal axis dimensions for inner halo
         self.fig = None
+        self._center_flag = False                            # relative coords?
 
     def __repr__(self):
         return '< Halo: ' + str(self.id) + '; Size: ' + str(len(self.particles)) + ' particles >'
 
     def center_halo(self):
         """
-        Iterating over each halo and subtracting its centre position from particle coordinates.
+        Iterating over each halo and subtracting its centre position
+        from particle coordinates i.e. convert to local coordinates.
         """
-        self.particles.x -= self.pos.x
-        self.particles.y -= self.pos.y
-        self.particles.z -= self.pos.z
+        if not self._center_flag:
+            self._center_flag = True
+            self.particles.x -= self.pos.x
+            self.particles.y -= self.pos.y
+            self.particles.z -= self.pos.z
+
+    def uncenter_halo(self):
+        """
+        Restore halo particles to absolute coordinates.
+        """
+        if self._center_flag:
+            self._center_flag = False
+            self.particles.x += self.pos.x
+            self.particles.y += self.pos.y
+            self.particles.z += self.pos.z
 
     def get_covariance_matrix(self):
         """
@@ -328,8 +342,12 @@ class Halo(object):
         """
         self.fig = plt.figure(self.id).add_subplot(111, projection='3d')
         firsthalf, secondhalf = self.cut(fraction)
-        self.fig.scatter(self.particlesn.x[firsthalf], self.particlesn.y[firsthalf], self.particlesn.z[firsthalf], c='r')
-        self.fig.scatter(self.particlesn.x[secondhalf], self.particlesn.y[secondhalf], self.particlesn.z[secondhalf], c='b')
+        if self.half_mass_radius==0:
+            colors = ('r','b')
+        else:
+            colors = ('b','b')
+        self.fig.scatter(self.particlesn.x[firsthalf], self.particlesn.y[firsthalf], self.particlesn.z[firsthalf], colors[0])
+        self.fig.scatter(self.particlesn.x[secondhalf], self.particlesn.y[secondhalf], self.particlesn.z[secondhalf], colors[1])
         if ellipsoids:
             self._draw_ellipsoids((firsthalf, secondhalf), mode, transform)
         plt.show()
@@ -419,3 +437,22 @@ class Halo(object):
         """
         self.particles = self.particles[np.array([id in other.particles.id for \
                                         id in self.particles.id], dtype=bool)]
+
+    def add(self, other):
+        """add new particles to current Halo. Particles are identified by their
+        IDs, not coordinates. Other particles might be in their local coordinate
+        system which needs to be accounted for by uncenter_halo().
+        :param other: a Halo instance
+        """
+        newparts = other.particles[np.array([id not in self.particles.id for \
+                                    id in other.particles.id], dtype=bool)]
+        np.resize(len(self.particles)+len(newparts))
+        self.particles[len(self.particles):] = newparts
+
+    def find_center(self):
+        """take an arithmetic mean of particle coordinates to find the center
+        position of halo
+        """
+        self.pos.x = np.mean(self.particles.x)
+        self.pos.y = np.mean(self.particles.y)
+        self.pos.z = np.mean(self.particles.z)
