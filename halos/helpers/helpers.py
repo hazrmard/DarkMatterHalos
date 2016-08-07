@@ -16,18 +16,21 @@ def read_ascii_pos(filepath='', settings=config._default_ascii_settings):
     return data
 
 
-def create_halo(haloid, halocenter, halox, haloy, haloz):
+def create_halo(haloid, halocenter, halox, haloy, haloz, partids=None):
     """
     given array of x,y,z coordinates generates a Halo instance
     :param haloid: id of halo
     :param halocenter: centre of halo as a touple e.g (0,0,0)
+    :param partids: list/array of integer id values for each particle
     :param halox: list/array of x coordinates
     :param haloy: list/array of y coordinates
     :param haloz: list/array of z coordinates
     :return: a Halo instance
     """
-    coords = zip(halox, haloy, haloz)
-    h = halos.Halo(haloid, halocenter, np.array(coords, dtype=config.COORDS).view(np.recarray))
+    if partids is None:
+        partids = range(len(halox))
+    coords = zip(partids, halox, haloy, haloz)
+    h = halos.Halo(haloid, halocenter, np.array(coords, dtype=config.COORDSwID).view(np.recarray))
     return h
 
 def do_all(halo):

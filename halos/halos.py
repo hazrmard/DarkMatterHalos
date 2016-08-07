@@ -146,7 +146,7 @@ class Halos:
         return set([h.id for h in self.h]) == set([h.id for h in other.h])
 
 
-class Halo:
+class Halo(object):
     coord_type = COORDS
 
     def __init__(self, id, pos, particles):
@@ -396,3 +396,26 @@ class Halo:
         """
         f_string = '{:.' + str(precision) + 'e}'
         return f_string.format(num)
+
+    def __eq__(self, other):
+        """checks if two Halo instances have same attributes
+        :param other: instance of Halo object
+        """
+        return self.__dict__ == other.__dict__
+
+    def intersect(self, other):
+        """returns set of ids of particles in both Halo instances. Particles are
+        identified by their IDs, not coordinates.
+        :param other: instance of Halo object
+        """
+        a = set(self.particle.id)
+        b = set(other.particle.id)
+        return a & b
+
+    def subtract(self, other):
+        """removes particles contained in other from self. Particles are
+        identified by their IDs, not coordinates.
+        :param other: instance of Halo object
+        """
+        self.particles = self.particles[np.array([id in other.particles.id for \
+                                        id in self.particles.id], dtype=bool)]

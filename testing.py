@@ -38,16 +38,17 @@ def ascii_test(path='..\data\ellipsoid.dat'):
     s_time = time.clock()
     coords = helpers.read_ascii_pos(path)
     h = Halo('test', (0, 0, 0), coords)
-    print 'execution time: ', time.clock()-s_time
+    do_all(h)
     return h
 
 # Generating a sample halo without ascii or bgc2 file
+# ids = [0,1,2,3,4]
 # x = [1,2,3,4,5]
 # y = [2,3,5,2,1]
 # z = [2,3,4,4,0]
 # id = 'test_halo'
 # center = (0, 0, 1)
-# halo = helpers.create_halo(id, center, x, y, z)
+# halo = helpers.create_halo(id, center, x, y, z, ids)
 
 # Perform calculations:
 # halo.center_halo()
@@ -58,3 +59,9 @@ def ascii_test(path='..\data\ellipsoid.dat'):
 
 # Visualize halo:
 # halo.visualize(ellipsoids=True)
+
+if __name__=='__main__':
+    print('Running calculations on sample BGC2 file:')
+    bgc2_test()
+    print('\nRunning calculations on sample ascii file:')
+    ascii_test()

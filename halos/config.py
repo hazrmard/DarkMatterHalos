@@ -3,6 +3,7 @@
 import numpy as np
 
 COORDS = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32)])    # coordinates data type
+COORDSwID = np.dtype([('id', np.int64), ('x', np.float32), ('y', np.float32), ('z', np.float32)])
 
 _default_ascii_settings = {'dtype': COORDS,
                            'comments':'#',
