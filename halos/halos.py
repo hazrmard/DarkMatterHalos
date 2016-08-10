@@ -29,8 +29,11 @@ class Halos:
         for file in self.files:
             temp_files.extend(glob.glob(file))
         self.files = temp_files
-        self.header = []
-        self.halos = []     # list of halos
+        if len(self.files)==0:
+            raise Exception('No files found.')
+
+        self.header = None
+        self.halos = []     # list of halo objects w/ particle data
         self.h = []         # halo metadata (position, id, size etc.)
         self.warnings = {}
         self.verbose = verbose
@@ -47,10 +50,16 @@ class Halos:
         """
         for file in self.files:
             header, h, particles = bgc2.read_bgc2_numpy(file, level=level, sieve=sieve)
-            self.header.append(header)
-            if h is not None:
+
+            if self.header is not None: # appending header data
+                self._add_header(header)
+            else:
+                self.header = [header]
+
+            if h is not None:           # appending halo group meta data
                 self.h.extend(h)
-            if level==2:
+
+            if level==2:                # appending particle data
                 for i in xrange(len(h)):
                     self.halos.append(Halo(h[i].id, (h[i].x, h[i].y, h[i].z), particles[i]))
             if level==1 and strict==False:
@@ -60,6 +69,10 @@ class Halos:
             print "data file(s) read"
 
     def filter(self, minimum=None, maximum=None):
+        """filter out halos with less/greater than # of particles
+        :param minimum: halos with <= this # of particles will be removed
+        :param maximim: halos with >= this # of particles will be removed
+        """
         if minimum is not None:
             self.halos = [self.halos[i] for i in range(len(self.h)) if self.h[i].npart >= minimum]
             self.h = [h for h in self.h if h.npart >= minimum]
@@ -122,15 +135,29 @@ class Halos:
                 if self.verbose:
                     print "Complex warning with halo id:" + str(halo.id)
                 i+=1
-                if self.verbose:
-                    print "higher order fit completed, total warnings: " + str(i)
+        if self.verbose:
+            print "higher order fit completed, total warnings: " + str(i)
+
+    def _add_header(self, header):
+        """append other BGC2 file header and check for incompatibilities"""
+        if self.header==header:
+            raise ValueError('Headers are identical, cannot merge.')
+        else:
+            for field in config.MANDATORY_HEADER_FIELDS: # check compartibility
+                if self.header[field]!=header[field]:
+                    raise ValueError('Cannot merge. Field: ' + field + 'is not \
+                                        equal for both files.')
+
+            # append header to current file
+            self.header.append(header)
 
     def __add__(self, other):
-        files = self.files + other.files
-        result = Halos(files)
-        result.halos = self.halos + other.halos
-        result.h = self.h + other.h
-        result.warnings = {}
+        """add other Halos instance data to current instance"""
+        self._add_header(other.header)
+        self.files += other.files
+        self.halos += other.halos
+        self.h += other.h
+        self.warnings = {}
         return result
 
     def __radd__(self, other):
@@ -337,8 +364,10 @@ class Halo(object):
     def visualize(self, ellipsoids=False, mode='cleave', transform=True, fraction=1.0):
         """
         3D plot of particles. Particles within half mass radius are in red. Others are in blue.
-        :fraction fraction of particles to show (1.0 means 100%)
-        :ellipsoids whether to draw fitted surfaces
+        :fraction: fraction of particles to show (1.0 means 100%)
+        :ellipsoids: whether to draw fitted surfaces
+        :mode: whether to draw ellipsoids by largest dimension (cleave) or eigenvalues(eval)
+        :transform: depracated
         """
         self.fig = plt.figure(self.id).add_subplot(111, projection='3d')
         firsthalf, secondhalf = self.cut(fraction)

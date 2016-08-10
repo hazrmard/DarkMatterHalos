@@ -27,3 +27,30 @@ _default_ascii_settings = {'dtype': COORDS,
                            'invalid_raise':True,
                            # 'max_rows':200
                            }
+
+# fields in header that have to be same for 2 bgc2 files to merge
+MANDATORY_HEADER_FIELDS = ('magic',\
+                           'version',\
+                           'num_files',\
+                           'snapshot',\
+                           'format_group_data',\
+                           'format_part_data',\
+                           'group_type',\
+                           'ngroups_total',\
+                           'npart_total',\
+                           'max_npart_total',\
+                           'min_group_part',\
+                           'valid_part_ids',\
+                           'linkinglength',\
+                           'overdensity',\
+                           'time',\
+                           'redshift',\
+                           'box_size',\
+                           'box_min_x',\
+                           'box_min_y',\
+                           'box_min_z',\
+                           'part_mass',\
+                           'Omega0',\
+                           'OmegaLambda',\
+                           'Hubble0',\
+                           'GravConst',)
