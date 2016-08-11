@@ -2,7 +2,7 @@ __author__ = 'Ibrahim'
 
 # This file contains examples of functions that can be used to process halo data.
 
-from halos import Halos, gendata, helpers
+from halos import Halos, Halo, gendata, helpers
 
 
 def bgc2_test(path='data\\halos_0.1.bgc2'):
@@ -42,15 +42,16 @@ def bgc2_merger_test(f1=r'data\*0000.bgc2', f2=r'data\*0001.bgc2'):
     except ValueError as e:
         print('SUCCESS: Invalid merger successfully prevented.')
 
-def ascii_test(path='data\\ellipsoid.dat'):
+def ascii_test(path='data\\halos_0.2.ascii'):
     """
     read data from an ascii file containing a single halo. By default, columns 1,2,3 (0-indexed) contain x,y,z coordinates,
     and first line of ascii file is skipped. See halos/helpers/helpers.py -> read_ascii_pos() for more documentation.
     """
-    print "reading file: ", path
+    print("Reading file: " + path)
     coords = helpers.read_ascii_pos(path)
     h = Halo('test', (0, 0, 0), coords)
     helpers.do_all(h)
+    print('Computations successfully completed.')
     return h
 
 def random_halo_test():

@@ -15,6 +15,7 @@ def read_ascii_pos(filepath='', settings=config._default_ascii_settings):
     http://docs.scipy.org/doc/numpy/reference/generated/numpy.genfromtxt.html
     :return: a numpy record array
     """
+    # TODO: return a proper Halo instance
     data = np.genfromtxt(filepath, **settings)
     data = data.view(np.recarray)
     return data
