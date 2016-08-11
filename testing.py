@@ -5,7 +5,7 @@ __author__ = 'Ibrahim'
 from halos import Halos, gendata, helpers
 
 
-def bgc2_test(path='data\halos_0.1.bgc2'):
+def bgc2_test(path='data\\halos_0.1.bgc2'):
     """
     reading data from a sample bgc2 file containing multiple halos
     :param path: path to file
@@ -22,8 +22,27 @@ def bgc2_test(path='data\halos_0.1.bgc2'):
     t.get_half_mass_radii()
     return t        # t.halos is a list of halos contained inside the bgc2 file
 
+def bgc2_merger_test(f1=r'data\*0000.bgc2', f2=r'data\*0001.bgc2'):
+    try:
+        h = Halos(f1, verbose=False)
+        g = Halos(f2, verbose=False)
+        h.read_data(level=0)
+        g.read_data(level=0)
+    except Exception as e:
+        print('Error reading test data files: data\\*0000.bgc2 and data\\*0001.bgc2')
+        print(str(e))
+        return
+    try:
+        h+g
+        print('SUCCESS: Compatible files merged.')
+    except:
+        print('FAILURE: BGC2 merger failed.')
+    try:
+        h+h
+    except ValueError as e:
+        print('SUCCESS: Invalid merger successfully prevented.')
 
-def ascii_test(path='data\ellipsoid.dat'):
+def ascii_test(path='data\\ellipsoid.dat'):
     """
     read data from an ascii file containing a single halo. By default, columns 1,2,3 (0-indexed) contain x,y,z coordinates,
     and first line of ascii file is skipped. See halos/helpers/helpers.py -> read_ascii_pos() for more documentation.
@@ -55,7 +74,7 @@ def random_halo_test():
 # halo.get_covariance_matrix()
 
 # Or just pass it to do_all():
-# halo = do_all(halo)
+# halo = helpers.do_all(halo)
 
 # Visualize halo:
 # halo.visualize(ellipsoids=True)
@@ -63,15 +82,18 @@ def random_halo_test():
 if __name__=='__main__':
     print('Running calculations on random halos:')
     random_halo_test()
+
     try:
         print('\nRunning calculations on sample BGC2 file:')
         bgc2_test()
     except IOError as e:
-        if e.message.endswith(".bgc2 not found."):
-            print('Test bgc2 file \'..\\data\\halos_0.1.bgc2\' not found.')
+            print('Test bgc2 file \'data\\halos_0.1.bgc2\' not found.')
+
+    print('Testing BGC2 file merger with Halos class:')
+    bgc2_merger_test()
+
     try:
         print('\nRunning calculations on sample ascii file:')
         ascii_test()
     except IOError as e:
-        if e.message.endswith("ellipsoids.dat not found."):
-            print('Test ascii file \'..\\data\\ellipsoids.dat\' not found.')
+            print('Test ascii file \'data\\ellipsoids.dat\' not found.')

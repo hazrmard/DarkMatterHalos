@@ -1,6 +1,10 @@
 import numpy as np
 from .. import config
 from .. import halos
+import glob
+import os
+import re
+from operator import itemgetter
 
 
 def read_ascii_pos(filepath='', settings=config._default_ascii_settings):
@@ -53,3 +57,51 @@ def std_dev(arr):
     n = len(arr)
     ssum = sum([x**2 for x in arr])
     return ssum/n - (sum(arr)/n)**2
+
+def generate_file_groups(path, version_levels=1, ignore_ext=True):
+    """create a list of lists, where each inner list is a group of files with
+    the same version level in the file name. Assumes file naming conventions are
+    consistent. Intended for BGC2 snapshots which are stored over multiple files.
+    :param path: UNIX style path i.e. *,?,[] wildcards accepted
+    :param version_levels: which subversion level to group on. For e.g filenames:
+    F1.0.0, F1.0.1, F1.1,0, F1.1.1, with version_levels=0 each file will have its
+    own group. With version_levels=1, [F1.0.0, F1.0.1], [F1.1,0, F1.1.1] => 2
+    groups w/ vers# 1.0.* and 1.1.*. And with version_levels=2, 1 group of vers# 1.*.*
+    :param ignore_ext: Whether or not to include any numbers in extension i.e
+    BGC'2' which is not a version indicator. True removes file extension.
+    """
+    flist = glob.glob(path)
+    finfo = []
+    if len(flist)==0:
+        raise Exception("No files found.")
+
+    if ignore_ext:      # remove extension (chars inc. and after last .)
+        finfo = [os.path.splitext(f)[0] for f in flist] # filepath w/0 extension
+    else:
+        finfo = [x for x in flist]
+
+    pattern = re.compile(r'\d+')
+    finfo = [[int(num) for num in pattern.findall(f)] for f in finfo] # nums in filepath representing ver#
+    possible_subversions = len(finfo[0])
+    if (possible_subversions-1<version_levels):
+        raise ValueError('Not enough subversions in filename for level ' + \
+                            str(version_levels) + ' grouping.')
+
+    names_and_info = zip(flist, finfo)  # file paths combined with extracted ver #s
+    sort_indices = range(0, possible_subversions-1)    # ver # indices to sort by
+    key = itemgetter(*sort_indices)    # to get subversions from ver #
+    names_and_info.sort(key=lambda x: key(x[1]))
+
+    groups=[]
+    ngroups=0
+    i=0
+    while i< len(names_and_info):
+        groups.append([])
+        curr_ver = names_and_info[i][1][0:possible_subversions-version_levels]
+        while (i<len(names_and_info) and \
+            curr_ver==names_and_info[i][1][0:possible_subversions-version_levels]):
+            groups[ngroups].append(names_and_info[i][0])
+            i+=1
+        ngroups+=1
+
+    return groups

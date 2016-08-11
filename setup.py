@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="halos",
-    version="0.7.0",
+    version="0.7.2",
     author="Ibrahim Ahmed",
     description="Find half mass radii of halos.",
     packages=find_packages(),

@@ -54,3 +54,7 @@ MANDATORY_HEADER_FIELDS = ('magic',\
                            'OmegaLambda',\
                            'Hubble0',\
                            'GravConst',)
+
+# fields in header that must be different
+EXCLUSIVE_HEADER_FIELDS = ('file_id',\
+                           )

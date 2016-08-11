@@ -2,10 +2,10 @@
 
 import sys
 import numpy as np
+import config
 import warnings
 import matplotlib.pyplot as plt
 import bgc2
-import config
 from mpl_toolkits.mplot3d import Axes3D
 import glob
 plt.ioff()
@@ -19,7 +19,8 @@ COORDS = config.COORDS
 class Halos:
     def __init__(self, files, verbose=True):
         """
-        :files single or list of paths. Paths can contain wildcards.
+        :param files: single or list of paths. Paths can contain wildcards. Accepts
+                      UNIX style path i.e. *,?,[] wildcards accepted
         """
         if type(files) is list:
             self.files = files
@@ -38,7 +39,7 @@ class Halos:
         self.warnings = {}
         self.verbose = verbose
 
-    def read_data(self, level=2, sieve=None, strict=False):
+    def read_data(self, level=2, sieve=None, strict=True):
         """
         bcg2.read_bcg2_numpy returns 3 numpy Record Arrays for header, halos, and particles.
         Header and halos are single dimensional Record Arrays containing data and halo information.
@@ -140,25 +141,29 @@ class Halos:
 
     def _add_header(self, header):
         """append other BGC2 file header and check for incompatibilities"""
-        if self.header==header:
-            raise ValueError('Headers are identical, cannot merge.')
+        if self.header[0]==header:
+            raise ValueError('Cannot merge. Multiple headers are identical.')
         else:
+            # check for fields that must be equal
             for field in config.MANDATORY_HEADER_FIELDS: # check compartibility
-                if self.header[field]!=header[field]:
-                    raise ValueError('Cannot merge. Field: ' + field + 'is not \
-                                        equal for both files.')
+                if self.header[0][field]!=header[field]:
+                    raise ValueError('Cannot merge. Field: ' + field + 'is not equal for both files.')
+            # check for fields that must not be equal
+            for i in range(len(self.header)):
+                for field in config.EXCLUSIVE_HEADER_FIELDS: # check compartibility
+                    if self.header[i][field]==header[field]:
+                        raise ValueError('Cannot merge. Field: ' + field + ' is equal for multiple files.')
 
             # append header to current file
             self.header.append(header)
 
     def __add__(self, other):
         """add other Halos instance data to current instance"""
-        self._add_header(other.header)
+        self._add_header(other.header[0])
         self.files += other.files
         self.halos += other.halos
         self.h += other.h
         self.warnings = {}
-        return result
 
     def __radd__(self, other):
         if other==0:
