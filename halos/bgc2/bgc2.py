@@ -58,11 +58,12 @@ def read_bgc2(filename):
 
 
 
-def read_bgc2_numpy(filename, level=2, sieve=None):
+def read_bgc2_numpy(filename, level=2, sieve=None, onlyid=False):
 	"""read halo data from bgc2 file.
 	:filename - path to file
 	:level - 0:only read header, 1:only read halo meta deta, 2: read particle data
 	:sieve - set of halo ids to keep. If None, all ids are kept.
+	:onlyid - only pass on ids for groups and particles if True. Usefule for preserving memory.
 	"""
 	import numpy as np
 
@@ -148,20 +149,15 @@ def read_bgc2_numpy(filename, level=2, sieve=None):
 			# Header stuff
 			header = np.rec.fromfile(fd, dtype=dt_header, shape=1)
 			header = header[0]
-			#print 'This is bgc2 file %d of %d.' % (header.file_id, header.num_files)
-			#print 'Redshift = ', header.redshift
-			#print 'Number of halos = ', header.ngroups
+
 
 		if level>=1:
 			# Group/halo stuff
-			#fd.seek(offset + headersize + groupoffset, 0)
-			#groups = np.rec.fromfile(fd, dtype=dt_groups, shape=header.ngroups)
 			fd.seek(offset + headersize + groupoffset, 0)
 			groups = np.rec.fromfile(fd, dtype=dt_groups, shape=header.ngroups)
 			if sieve is not None:
 				temp_groups = [x if x.id in sieve else int(x.npart) for x in groups]
 				groups = [x for x in temp_groups if not isinstance(x, (int, long))]
-				#print 'filtered group size', len(groups)
 
 
 
@@ -181,6 +177,11 @@ def read_bgc2_numpy(filename, level=2, sieve=None):
 						fd.seek(particleoffset, 1)
 					else:
 						fd.seek(particleoffset + temp_groups[i]*particlesize, 1)
+
+
+	if onlyid:
+		particles = [p.id for p in particles]
+		groups = [g.id for g in groups]
 
 	#print "Finished reading bgc2 file."
 	return header, groups, particles

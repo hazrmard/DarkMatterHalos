@@ -11,8 +11,19 @@ def bgc2_test(path='data\\halos_0.1.bgc2'):
     :param path: path to file
     :return: a Halos instance containing list of halos (<return_variable>.halos)
     """
+    print("\n=>Reading only header data: ")
     t = Halos(path)
-    t.read_data()
+    t.read_data(level=0)
+    print("\n=>Reading header + halo data: ")
+    t = Halos(path)
+    t.read_data(level=1)
+    print("\n=>Reading header + only halo id + only particle id data: ")
+    t = Halos(path)
+    t.read_data(level=2, onlyid=True)
+    print("\n=>Reading header + halo + particle data: ")
+    t = Halos(path)
+    t.read_data(level=2)
+    print("\n=>Performing calculations: ")
     t.filter(100)         # filter out halos w/ less than 4 particles
     t.center_halos()
     t.get_covariance_matrices()
@@ -42,17 +53,17 @@ def bgc2_merger_test(f1=r'data\*0000.bgc2', f2=r'data\*0001.bgc2'):
     except ValueError as e:
         print('SUCCESS: Invalid merger successfully prevented.')
 
-def ascii_test(path='data\\halos_0.2.ascii'):
-    """
-    read data from an ascii file containing a single halo. By default, columns 1,2,3 (0-indexed) contain x,y,z coordinates,
-    and first line of ascii file is skipped. See halos/helpers/helpers.py -> read_ascii_pos() for more documentation.
-    """
-    print("Reading file: " + path)
-    coords = helpers.read_ascii_pos(path)
-    h = Halo('test', (0, 0, 0), coords)
-    helpers.do_all(h)
-    print('Computations successfully completed.')
-    return h
+# def ascii_test(path='data\\halos_0.2.ascii'):
+#     """
+#     read data from an ascii file containing a single halo. By default, columns 1,2,3 (0-indexed) contain x,y,z coordinates,
+#     and first line of ascii file is skipped. See halos/helpers/helpers.py -> read_ascii_pos() for more documentation.
+#     """
+#     print("Reading file: " + path)
+#     coords = helpers.read_ascii_pos(path)
+#     h = Halo('test', (0, 0, 0), coords)
+#     helpers.do_all(h)
+#     print('Computations successfully completed.')
+#     return h
 
 def random_halo_test():
     h = gendata.halo(n=1000)        # generate random halo
@@ -81,20 +92,20 @@ def random_halo_test():
 # halo.visualize(ellipsoids=True)
 
 if __name__=='__main__':
-    print('Running calculations on random halos:')
+    print('\n=>Running calculations on random halos:')
     random_halo_test()
 
     try:
-        print('\nRunning calculations on sample BGC2 file:')
+        print('\n=>Running calculations on sample BGC2 file:')
         bgc2_test()
     except IOError as e:
             print('Test bgc2 file \'data\\halos_0.1.bgc2\' not found.')
 
-    print('Testing BGC2 file merger with Halos class:')
+    print('\n=>Testing BGC2 file mergers:')
     bgc2_merger_test()
 
-    try:
-        print('\nRunning calculations on sample ascii file:')
-        ascii_test()
-    except IOError as e:
-            print('Test ascii file \'data\\ellipsoids.dat\' not found.')
+    # try:
+    #     print('\nRunning calculations on sample ascii file:')
+    #     ascii_test()
+    # except IOError as e:
+    #         print('Test ascii file \'data\\ellipsoids.dat\' not found.')

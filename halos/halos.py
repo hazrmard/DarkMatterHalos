@@ -33,13 +33,13 @@ class Halos:
         if len(self.files)==0:
             raise Exception('No files found.')
 
-        self.header = None
+        self.header = []
         self.halos = []     # list of halo objects w/ particle data
         self.h = []         # halo metadata (position, id, size etc.)
         self.warnings = {}
         self.verbose = verbose
 
-    def read_data(self, level=2, sieve=None, strict=True):
+    def read_data(self, level=2, sieve=None, strict=True, onlyid=False):
         """
         bcg2.read_bcg2_numpy returns 3 numpy Record Arrays for header, halos, and particles.
         Header and halos are single dimensional Record Arrays containing data and halo information.
@@ -47,25 +47,28 @@ class Halos:
         Schema for arrays can be found in halos/helpers/bcg2.py.
         :level reads either header(0), halo metadata(1) or particle data (2). Should be 2.
         :sieve a set of ids to keep. All others discarded. If None, all data are kept.
-        :strict=False creates empty halo instances just with metadata, True does not create instances
+        :strict[DEPRACATED]=False creates empty halo instances just with metadata, True does not create instances
+        :onlyid=True reads only halo and particle ids, default is False for full data
         """
         for file in self.files:
-            header, h, particles = bgc2.read_bgc2_numpy(file, level=level, sieve=sieve)
+            header, h, particles = bgc2.read_bgc2_numpy(file, level=level, sieve=sieve, onlyid=onlyid)
 
-            if self.header is not None: # appending header data
+            if level>=0:                # appending header data, level=0
                 self._add_header(header)
-            else:
-                self.header = [header]
 
-            if h is not None:           # appending halo group meta data
+            if level>=1:                # appending halo group meta data, level=1
                 self.h.extend(h)
 
-            if level==2:                # appending particle data
-                for i in xrange(len(h)):
-                    self.halos.append(Halo(h[i].id, (h[i].x, h[i].y, h[i].z), particles[i]))
-            if level==1 and strict==False:
-                for i in xrange(len(h)):
-                    self.halos.append(Halo(h[i].id, (h[i].x, h[i].y, h[i].z), ()))
+            if level>=2:                # appending particle data, level=2
+                if not onlyid:
+                    for i in xrange(len(h)):
+                        self.halos.append(Halo(h[i].id, (h[i].x, h[i].y, h[i].z), particles[i]))
+                else:
+                    for i in xrange(len(h)):
+                        self.halos.append(Halo(h[i], (None, None, None), particles[i]))
+            # if level==1 and strict==False:
+            #     for i in xrange(len(h)):
+            #         self.halos.append(Halo(h[i].id, (h[i].x, h[i].y, h[i].z), ()))
         if self.verbose:
             print "data file(s) read"
 
@@ -141,11 +144,13 @@ class Halos:
 
     def _add_header(self, header):
         """append other BGC2 file header and check for incompatibilities"""
-        if self.header[0]==header:
+        if len(self.header)==0:
+            self.header = [header]
+        elif self.header[0]==header:
             raise ValueError('Cannot merge. Multiple headers are identical.')
         else:
             # check for fields that must be equal
-            for field in config.MANDATORY_HEADER_FIELDS: # check compartibility
+            for field in config.MANDATORY_HEADER_FIELDS:    # check compartibility
                 if self.header[0][field]!=header[field]:
                     raise ValueError('Cannot merge. Field: ' + field + 'is not equal for both files.')
             # check for fields that must not be equal
@@ -306,12 +311,12 @@ class Halo(object):
             othercoords =  zip(self.particlesn.x, self.particlesn.y, self.particlesn.z)
             H = Halo(id='otherhalo', pos=(0,0,0), particles=np.array(othercoords, dtype=self.coord_type).view(np.recarray))
 
-            h.get_covariance_matrix()               # calculate descriptors of inner halo
+            h.get_covariance_matrix()              # calculate descriptors of inner halo
             h.get_eigenvectors()
 
             H.convert_basis(basis=h.eig)           # transform copy of self into new descriptors
             H.get_radii(evals=h.evals)
-            indices, _ = H.cut()                         # find new 'inner' particles
+            indices, _ = H.cut()                   # find new 'inner' particles
 
             self.inner_cov = h.cov
             self.inner_evals = h.evals
@@ -372,7 +377,7 @@ class Halo(object):
         :fraction: fraction of particles to show (1.0 means 100%)
         :ellipsoids: whether to draw fitted surfaces
         :mode: whether to draw ellipsoids by largest dimension (cleave) or eigenvalues(eval)
-        :transform: depracated
+        :transform: whether or not to transform inner ellipsoid to inner particle distribution
         """
         self.fig = plt.figure(self.id).add_subplot(111, projection='3d')
         firsthalf, secondhalf = self.cut(fraction)
