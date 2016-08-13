@@ -3,6 +3,7 @@ __author__ = 'Ibrahim'
 # This file contains examples of functions that can be used to process halo data.
 
 from halos import Halos, Halo, gendata, helpers
+import numpy as np
 
 
 def bgc2_test(path='data\\halos_0.1.bgc2'):
@@ -11,19 +12,40 @@ def bgc2_test(path='data\\halos_0.1.bgc2'):
     :param path: path to file
     :return: a Halos instance containing list of halos (<return_variable>.halos)
     """
-    print("\n=>Reading only header data: ")
-    t = Halos(path)
+    print("\n\t->Reading only header data: ")
+    t = Halos(path, verbose=False)
     t.read_data(level=0)
-    print("\n=>Reading header + halo data: ")
-    t = Halos(path)
+    if len(t.header)==1:
+        print("\t\tSUCCESS: Header read.")
+    else:
+        print("\t\tFAILURE: Header not read.")
+
+    print("\n\t->Reading header + halo data: ")
+    t = Halos(path, verbose=False)
     t.read_data(level=1)
-    print("\n=>Reading header + only halo id + only particle id data: ")
-    t = Halos(path)
+    if t.header[0].ngroups==len(t.h):
+        print("\t\tSUCCESS: Halo data read.")
+    else:
+        print("\t\tFAILURE: Halo data improperly read.")
+    sample_ids = np.random.choice(t.h.id, 100, replace=False)
+
+    print("\n\t->Reading header + only halo id + only particle id data: ")
+    t = Halos(path, verbose=False)
     t.read_data(level=2, onlyid=True)
-    print("\n=>Reading header + halo + particle data: ")
-    t = Halos(path)
-    t.read_data(level=2)
-    print("\n=>Performing calculations: ")
+    if len(t.h.id)==t.header[0].ngroups and len(t.halos[0].particles.id)>0:
+        print("\t\tSUCCESS: ID data read.")
+    else:
+        print("\t\tFAILURE: ID data improperly read.")
+
+    print("\n\t->Reading header + halo + particle data: ")
+    t = Halos(path, verbose=False)
+    t.read_data(level=2, sieve=sample_ids)
+    if len(t.h.id)==len(sample_ids) and len(t.halos[0].particles.id)==t.h[0].npart:
+        print("\t\tSUCCESS: Full data read.")
+    else:
+        print("\t\tFAILURE: Full data improperly read.")
+
+    print("\n\t->Performing calculations. ")
     t.filter(100)         # filter out halos w/ less than 4 particles
     t.center_halos()
     t.get_covariance_matrices()
@@ -31,7 +53,7 @@ def bgc2_test(path='data\\halos_0.1.bgc2'):
     t.convert_bases()
     t.get_radii()    # center_halo(), get_covariance_matrices() and get_eigenvectors() functions must be called before
     t.get_half_mass_radii()
-    return t        # t.halos is a list of halos contained inside the bgc2 file
+    print("\t\tSUCCESS: All calculations finished.")
 
 def bgc2_merger_test(f1=r'data\*0000.bgc2', f2=r'data\*0001.bgc2'):
     try:
@@ -40,18 +62,18 @@ def bgc2_merger_test(f1=r'data\*0000.bgc2', f2=r'data\*0001.bgc2'):
         h.read_data(level=0)
         g.read_data(level=0)
     except Exception as e:
-        print('Error reading test data files: data\\*0000.bgc2 and data\\*0001.bgc2')
-        print(str(e))
+        print('\t\tFAILURE: Error reading test data files: data\\*0000.bgc2 and data\\*0001.bgc2: ')
+        print('\t\t' + str(e))
         return
     try:
         h+g
-        print('SUCCESS: Compatible files merged.')
-    except:
-        print('FAILURE: BGC2 merger failed.')
+        print('\t\tSUCCESS: Compatible files merged.')
+    except Exception as e:
+        print('\t\tFAILURE: BGC2 merger failed: ' + str(e))
     try:
         h+h
     except ValueError as e:
-        print('SUCCESS: Invalid merger successfully prevented.')
+        print('\t\tSUCCESS: Invalid merger prevented.')
 
 # def ascii_test(path='data\\halos_0.2.ascii'):
 #     """

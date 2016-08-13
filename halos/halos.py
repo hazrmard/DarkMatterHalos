@@ -14,7 +14,6 @@ plt.ioff()
 #plt.hold(True)
 warnings.simplefilter('error', RuntimeWarning)      # raise exception on RuntimeWarning
 
-COORDS = config.COORDS
 
 class Halos:
     def __init__(self, files, verbose=True):
@@ -38,18 +37,20 @@ class Halos:
         self.h = []         # halo metadata (position, id, size etc.)
         self.warnings = {}
         self.verbose = verbose
+        self.onlyid = False
 
     def read_data(self, level=2, sieve=None, strict=True, onlyid=False):
         """
         bcg2.read_bcg2_numpy returns 3 numpy Record Arrays for header, halos, and particles.
         Header and halos are single dimensional Record Arrays containing data and halo information.
         Particle is a Record Array of Record Arrays for each halo id and for each particle axis.
-        Schema for arrays can be found in halos/helpers/bcg2.py.
+        Schema for arrays can be found in halos/config.py.
         :level reads either header(0), halo metadata(1) or particle data (2). Should be 2.
         :sieve a set of ids to keep. All others discarded. If None, all data are kept.
         :strict[DEPRACATED]=False creates empty halo instances just with metadata, True does not create instances
         :onlyid=True reads only halo and particle ids, default is False for full data
         """
+        self.onlyid = onlyid
         for file in self.files:
             header, h, particles = bgc2.read_bgc2_numpy(file, level=level, sieve=sieve, onlyid=onlyid)
 
@@ -57,7 +58,7 @@ class Halos:
                 self._add_header(header)
 
             if level>=1:                # appending halo group meta data, level=1
-                self.h.extend(h)
+                self._add_groups(h, onlyid)
 
             if level>=2:                # appending particle data, level=2
                 if not onlyid:
@@ -162,12 +163,20 @@ class Halos:
             # append header to current file
             self.header.append(header)
 
+    def _add_groups(self, h, onlyid):
+        """append group data/halo metadata to self.h"""
+        self.h.extend(h)
+        if onlyid:
+            self.h = np.array(self.h, dtype=np.dtype([('id',np.float64)])).view(np.recarray)
+        else:
+            self.h = np.array(self.h, dtype=config.DT_GROUPS).view(np.recarray)
+
     def __add__(self, other):
         """add other Halos instance data to current instance"""
         self._add_header(other.header[0])
         self.files += other.files
         self.halos += other.halos
-        self.h += other.h
+        self._add_groups(other.h, self.onlyid)
         self.warnings = {}
 
     def __radd__(self, other):
@@ -184,7 +193,7 @@ class Halos:
 
 
 class Halo(object):
-    coord_type = COORDS
+    coord_type = config.DT_COORDS
 
     def __init__(self, id, pos, particles):
         self.id = id
@@ -254,7 +263,7 @@ class Halo(object):
         coords = np.array(zip(self.particles.x, self.particles.y, self.particles.z))    # n x 3 matrix
         e_1 = np.linalg.inv(basis)                     # inverse eigenvector matrix
         e_1c = np.dot(e_1, coords.T)               # points transformed to the new basis.
-        self.particlesn = np.array(zip(*e_1c), dtype=COORDS).view(np.recarray)
+        self.particlesn = np.array(zip(*e_1c), dtype=config.DT_COORDS).view(np.recarray)
 
     def get_radii_2(self):          # depracated approach to finding ellipsoid fit. Use get_radii()
         """

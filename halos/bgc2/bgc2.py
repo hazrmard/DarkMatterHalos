@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import sys
+from .. import config
+import numpy as np
 
 
 def read_bgc2(filename):
@@ -81,84 +83,22 @@ def read_bgc2_numpy(filename, level=2, sieve=None, onlyid=False):
 	if sieve is not None:
 		sieve = set(sieve)
 
-	dt_header = np.dtype([('magic', np.uint64), \
-	                      ('version', np.int64), \
-	                      ('num_files', np.int64), \
-	                      ('file_id', np.int64), \
-	                      ('snapshot', np.int64), \
-	                      ('format_group_data', np.int64), \
-	                      ('format_part_data', np.int64), \
-	                      ('group_type', np.int64), \
-	                      ('ngroups', np.int64), \
-	                      ('ngroups_total', np.int64), \
-	                      ('npart', np.int64), \
-	                      ('npart_total', np.int64), \
-	                      ('npart_orig', np.int64), \
-	                      ('max_npart', np.int64), \
-	                      ('max_npart_total', np.int64), \
-	                      ('min_group_part', np.int64), \
-	                      ('valid_part_ids', np.int64), \
-	                      ('linkinglength', np.float64), \
-	                      ('overdensity', np.float64), \
-	                      ('time', np.float64), \
-	                      ('redshift', np.float64), \
-	                      ('box_size', np.float64), \
-	                      ('box_min_x', np.float64), \
-	                      ('box_min_y', np.float64), \
-	                      ('box_min_z', np.float64), \
-	                      ('bounds_xmin', np.float64), \
-	                      ('bounds_xmax', np.float64), \
-	                      ('bounds_ymin', np.float64), \
-	                      ('bounds_ymax', np.float64), \
-	                      ('bounds_zmin', np.float64), \
-	                      ('bounds_zmax', np.float64), \
-	                      ('part_mass', np.float64), \
-	                      ('Omega0', np.float64), \
-	                      ('OmegaLambda', np.float64), \
-	                      ('Hubble0', np.float64), \
-	                      ('GravConst', np.float64)])
-
-	dt_groups = np.dtype([('id', np.int64), \
-	                      ('parent_id', np.int64), \
-	                      ('npart', np.uint64), \
-	                      ('npart_self', np.uint64), \
-	                      ('radius', np.float32), \
-	                      ('mass', np.float32), \
-	                      ('x', np.float32), \
-	                      ('y', np.float32), \
-	                      ('z', np.float32), \
-	                      ('vx', np.float32), \
-	                      ('vy', np.float32), \
-	                      ('vz', np.float32), \
-	                      ('vmax', np.float32), \
-	                      ('rvmax', np.float32)])
-
-	dt_particles = np.dtype([('id', np.int64), \
-	                         ('x', np.float32), \
-	                         ('y', np.float32), \
-	                         ('z', np.float32), \
-	                         ('vx', np.float32), \
-	                         ('vy', np.float32), \
-	                         ('vz', np.float32)])
-
 	#print "Reading "+filename+"..."
 	with open(filename, 'rb') as fd:
 		fd.seek(offset, 0)
 
 		if level>=0:
 			# Header stuff
-			header = np.rec.fromfile(fd, dtype=dt_header, shape=1)
+			header = np.rec.fromfile(fd, dtype=config.DT_HEADER, shape=1)
 			header = header[0]
 
 
 		if level>=1:
 			# Group/halo stuff
 			fd.seek(offset + headersize + groupoffset, 0)
-			groups = np.rec.fromfile(fd, dtype=dt_groups, shape=header.ngroups)
-			if sieve is not None:
-				temp_groups = [x if x.id in sieve else int(x.npart) for x in groups]
-				groups = [x for x in temp_groups if not isinstance(x, (int, long))]
-
+			groups = np.rec.fromfile(fd, dtype=config.DT_GROUPS, shape=header.ngroups)
+			if sieve is not None:	# set a filter flag list for groups
+				temp_groups = np.array([g in sieve for g in groups.id], dtype=np.bool)
 
 
 		if level>=2:
@@ -167,20 +107,23 @@ def read_bgc2_numpy(filename, level=2, sieve=None, onlyid=False):
 			particles = []
 			if sieve is None:
 				for i in range(header.ngroups):
-					particles.append(np.rec.fromfile(fd, dtype=dt_particles, shape=groups[i].npart))
+					particles.append(np.rec.fromfile(fd, dtype=config.DT_PARTICLES, shape=groups[i].npart))
 					fd.seek(particleoffset, 1)
-			else:
+			else:	# use the filter flag list to include or skip group particles
 				for i in range(header.ngroups):
-					if not isinstance(temp_groups[i], (int,long)):
-						record = np.rec.fromfile(fd, dtype=dt_particles, shape=temp_groups[i].npart)
+					# if not isinstance(temp_groups[i], (int,long)):
+					if temp_groups[i]==1:	# needs to be included
+						record = np.rec.fromfile(fd, dtype=config.DT_PARTICLES, shape=groups[i].npart)
 						particles.append(record)
 						fd.seek(particleoffset, 1)
-					else:
-						fd.seek(particleoffset + temp_groups[i]*particlesize, 1)
+					else:	# else num of particles in unneeded group so can be skipped
+						fd.seek(particleoffset + groups[i].npart*particlesize, 1)
+
+				groups = groups[temp_groups]	# finally filter groups as well using filter flag list
 
 
 	if onlyid:
-		particles = [p.id for p in particles]
+		particles = [np.array(p.id.copy(), dtype=np.dtype([('id',np.float64)])).view(np.recarray) for p in particles]
 		groups = [g.id for g in groups]
 
 	#print "Finished reading bgc2 file."

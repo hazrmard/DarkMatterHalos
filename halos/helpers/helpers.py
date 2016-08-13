@@ -35,7 +35,7 @@ def create_halo(haloid, halocenter, halox, haloy, haloz, partids=None):
     if partids is None:
         partids = range(len(halox))
     coords = zip(partids, halox, haloy, haloz)
-    h = halos.Halo(haloid, halocenter, np.array(coords, dtype=config.COORDSwID).view(np.recarray))
+    h = halos.Halo(haloid, halocenter, np.array(coords, dtype=config.DT_COORDSwID).view(np.recarray))
     return h
 
 def do_all(halo):
