@@ -123,7 +123,7 @@ def read_bgc2_numpy(filename, level=2, sieve=None, onlyid=False):
 
 
 	if onlyid:
-		particles = [np.array(p.id.copy(), dtype=np.dtype([('id',np.float64)])).view(np.recarray) for p in particles]
+		particles = [np.array(p.id.copy(), dtype=np.dtype(config.DT_ID)).view(np.recarray) for p in particles]
 		groups = [g.id for g in groups]
 
 	#print "Finished reading bgc2 file."

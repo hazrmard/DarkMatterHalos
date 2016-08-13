@@ -5,6 +5,8 @@ import numpy as np
 DT_COORDS = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32)])    # coordinates data type
 DT_COORDSwID = np.dtype([('id', np.int64), ('x', np.float32), ('y', np.float32), ('z', np.float32)])
 
+DT_ID = np.dtype([('id', np.int64)])
+
 DT_HEADER = np.dtype([('magic', np.uint64), \
                       ('version', np.int64), \
                       ('num_files', np.int64), \

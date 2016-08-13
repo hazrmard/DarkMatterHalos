@@ -32,9 +32,9 @@ class Halos:
         if len(self.files)==0:
             raise Exception('No files found.')
 
-        self.header = []
-        self.halos = []     # list of halo objects w/ particle data
-        self.h = []         # halo metadata (position, id, size etc.)
+        self.header = np.array([], dtype=config.DT_HEADER)
+        self.halos = []               # list of halo objects w/ particle data
+        self.h = np.array([], dtype=config.DT_GROUPS)         # halo metadata (position, id, size etc.)
         self.warnings = {}
         self.verbose = verbose
         self.onlyid = False
@@ -50,7 +50,13 @@ class Halos:
         :strict[DEPRACATED]=False creates empty halo instances just with metadata, True does not create instances
         :onlyid=True reads only halo and particle ids, default is False for full data
         """
-        self.onlyid = onlyid
+        if onlyid!=self.onlyid: # reset storage w/ appropriate types if different onlyid value
+            self.onlyid = onlyid
+            self.header = np.array([], dtype=config.DT_HEADER)
+            self.halos = []
+            if not onlyid: self.h = np.array([], dtype=config.DT_GROUPS)
+            if onlyid: self.h = np.array([], dtype=config.DT_ID)
+
         for file in self.files:
             header, h, particles = bgc2.read_bgc2_numpy(file, level=level, sieve=sieve, onlyid=onlyid)
 
@@ -146,7 +152,7 @@ class Halos:
     def _add_header(self, header):
         """append other BGC2 file header and check for incompatibilities"""
         if len(self.header)==0:
-            self.header = [header]
+            self.header = np.append(self.header, np.array([header], dtype=config.DT_HEADER)).view(np.recarray)
         elif self.header[0]==header:
             raise ValueError('Cannot merge. Multiple headers are identical.')
         else:
@@ -161,15 +167,15 @@ class Halos:
                         raise ValueError('Cannot merge. Field: ' + field + ' is equal for multiple files.')
 
             # append header to current file
-            self.header.append(header)
+            self.header = np.append(self.header, np.array([header], dtype=config.DT_HEADER)).view(np.recarray)
 
     def _add_groups(self, h, onlyid):
         """append group data/halo metadata to self.h"""
-        self.h.extend(h)
+
         if onlyid:
-            self.h = np.array(self.h, dtype=np.dtype([('id',np.float64)])).view(np.recarray)
+            self.h = np.append(self.h, np.array(h, dtype=config.DT_ID)).view(np.recarray)
         else:
-            self.h = np.array(self.h, dtype=config.DT_GROUPS).view(np.recarray)
+            self.h = np.append(self.h, np.array(h, dtype=config.DT_GROUPS)).view(np.recarray)
 
     def __add__(self, other):
         """add other Halos instance data to current instance"""
